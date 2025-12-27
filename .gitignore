@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+venv/
+.venv/
+*.egg-info/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+*.egg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Data (local storage)
+data/audio/
+data/transcripts/
+
+# Testing
+.coverage
+coverage/
+.pytest_cache/
+htmlcov/
+
+# Docker
+docker-compose.override.yml
+
+# Database
+*.db
+*.sqlite
+
+# Secrets (never commit)
+*.pem
+*.key
+secrets/
+
+# Local data
+data/postgres/
+data/redis/
+data/qdrant/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
