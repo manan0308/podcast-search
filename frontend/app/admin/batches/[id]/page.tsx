@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Wifi,
   WifiOff,
+  StopCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,12 +34,19 @@ export default function BatchDetailPage() {
   const [batch, setBatch] = useState<BatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [jobActionLoading, setJobActionLoading] = useState<string | null>(null);
+  // Debounced connection status to prevent flickering
+  const [stableConnected, setStableConnected] = useState(false);
+  const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // WebSocket for real-time updates
   const handleWsUpdate = useCallback((update: JobUpdate | BatchUpdate) => {
     if (update.type === "job_update") {
       setBatch((prev) => {
         if (!prev) return prev;
+        // Don't update jobs if batch is cancelled
+        if (prev.status === "cancelled") return prev;
+        
         const jobUpdate = update as JobUpdate;
         const updatedJobs = prev.jobs.map((job) =>
           job.id === jobUpdate.job_id
@@ -47,7 +55,7 @@ export default function BatchDetailPage() {
                 status: jobUpdate.status,
                 progress: jobUpdate.progress,
                 current_step: jobUpdate.current_step,
-                error_message: jobUpdate.error_message,
+                error_message: jobUpdate.error_message ?? null,
               }
             : job
         );
@@ -68,6 +76,19 @@ export default function BatchDetailPage() {
       const batchUpdate = update as BatchUpdate;
       setBatch((prev) => {
         if (!prev) return prev;
+        // If batch is cancelled, update all non-done jobs to cancelled
+        if (batchUpdate.status === "cancelled") {
+          return {
+            ...prev,
+            status: batchUpdate.status,
+            completed_episodes: batchUpdate.completed_episodes,
+            failed_episodes: batchUpdate.failed_episodes,
+            progress_percent: batchUpdate.progress_percent,
+            jobs: prev.jobs.map((job) => 
+              job.status !== "done" ? { ...job, status: "cancelled", current_step: null } : job
+            ),
+          };
+        }
         return {
           ...prev,
           status: batchUpdate.status,
@@ -80,6 +101,24 @@ export default function BatchDetailPage() {
   }, []);
 
   const { isConnected } = useBatchUpdates(id, handleWsUpdate);
+  
+  // Debounce connection status changes to prevent flickering
+  useEffect(() => {
+    if (connectionTimeoutRef.current) {
+      clearTimeout(connectionTimeoutRef.current);
+    }
+    connectionTimeoutRef.current = setTimeout(() => {
+      setStableConnected(isConnected);
+    }, 1000); // 1 second debounce
+    
+    return () => {
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+      }
+    };
+  }, [isConnected]);
+
+  const connectionRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadBatch();
@@ -134,11 +173,51 @@ export default function BatchDetailPage() {
   };
 
   const handleRetryJob = async (jobId: string) => {
+    setJobActionLoading(jobId);
     try {
       await api.retryJob(jobId);
       await loadBatch();
     } catch (error) {
       console.error("Failed to retry job:", error);
+    } finally {
+      setJobActionLoading(null);
+    }
+  };
+
+  const handlePauseJob = async (jobId: string) => {
+    setJobActionLoading(jobId);
+    try {
+      await api.pauseJob(jobId);
+      await loadBatch();
+    } catch (error) {
+      console.error("Failed to pause job:", error);
+    } finally {
+      setJobActionLoading(null);
+    }
+  };
+
+  const handleResumeJob = async (jobId: string) => {
+    setJobActionLoading(jobId);
+    try {
+      await api.resumeJob(jobId);
+      await loadBatch();
+    } catch (error) {
+      console.error("Failed to resume job:", error);
+    } finally {
+      setJobActionLoading(null);
+    }
+  };
+
+  const handleCancelJob = async (jobId: string) => {
+    if (!confirm("Are you sure you want to cancel this job?")) return;
+    setJobActionLoading(jobId);
+    try {
+      await api.cancelJob(jobId);
+      await loadBatch();
+    } catch (error) {
+      console.error("Failed to cancel job:", error);
+    } finally {
+      setJobActionLoading(null);
     }
   };
 
@@ -206,7 +285,7 @@ export default function BatchDetailPage() {
             )}
             {/* WebSocket connection status */}
             <div className="flex items-center gap-1 text-xs">
-              {isConnected ? (
+              {stableConnected ? (
                 <>
                   <Wifi className="h-3 w-3 text-green-500" />
                   <span className="text-green-600">Live</span>
@@ -328,47 +407,98 @@ export default function BatchDetailPage() {
         <CardContent>
           <ScrollArea className="h-[500px]">
             <div className="space-y-2">
-              {batch.jobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="flex items-center gap-3 p-3 border rounded-lg"
-                >
-                  {getJobStatusIcon(job.status)}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{job.episode_title}</p>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Badge variant="outline" className="text-xs">
-                        {job.status}
-                      </Badge>
-                      {job.current_step && (
-                        <span>{job.current_step}</span>
+              {batch.jobs.map((job) => {
+                const isProcessing = ["processing", "transcribing", "downloading", "embedding", "chunking"].includes(job.status);
+                const isPending = job.status === "pending" || job.status === "queued";
+                const canPause = isProcessing;
+                const canResume = job.status === "paused";
+                const canCancel = isProcessing || isPending || job.status === "paused";
+                const isJobLoading = jobActionLoading === job.id;
+
+                return (
+                  <div
+                    key={job.id}
+                    className="flex items-center gap-3 p-3 border rounded-lg overflow-hidden"
+                  >
+                    <div className="shrink-0">
+                      {getJobStatusIcon(job.status)}
+                    </div>
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <p className="font-medium truncate text-sm">{job.episode_title}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          {job.status}
+                        </Badge>
+                        {job.current_step && (
+                          <span className="truncate">{job.current_step}</span>
+                        )}
+                        {job.error_message && (
+                          <span className="text-red-500 truncate">
+                            {job.error_message}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Progress bar for processing jobs */}
+                      {isProcessing && (
+                        <div className="w-16">
+                          <Progress value={job.progress || 0} className="h-2" />
+                        </div>
                       )}
-                      {job.error_message && (
-                        <span className="text-red-500 truncate">
-                          {job.error_message}
-                        </span>
+                      
+                      {/* Job action buttons */}
+                      {isJobLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          {canPause && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handlePauseJob(job.id)}
+                              title="Pause job"
+                            >
+                              <Pause className="h-3 w-3" />
+                            </Button>
+                          )}
+                          {canResume && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleResumeJob(job.id)}
+                              title="Resume job"
+                            >
+                              <Play className="h-3 w-3" />
+                            </Button>
+                          )}
+                          {canCancel && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleCancelJob(job.id)}
+                              title="Cancel job"
+                              className="text-red-500 hover:text-red-600"
+                            >
+                              <StopCircle className="h-3 w-3" />
+                            </Button>
+                          )}
+                          {job.status === "failed" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRetryJob(job.id)}
+                            >
+                              <RotateCcw className="h-3 w-3 mr-1" />
+                              Retry
+                            </Button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {job.status !== "done" && job.status !== "pending" && (
-                      <div className="w-20">
-                        <Progress value={job.progress} />
-                      </div>
-                    )}
-                    {job.status === "failed" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleRetryJob(job.id)}
-                      >
-                        <RotateCcw className="h-3 w-3 mr-1" />
-                        Retry
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </ScrollArea>
         </CardContent>

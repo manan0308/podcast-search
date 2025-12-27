@@ -21,10 +21,17 @@ from app.services.youtube import YouTubeService
 
 # YouTube URL validation patterns
 YOUTUBE_CHANNEL_PATTERNS = [
-    r'^https?://(?:www\.)?youtube\.com/@[\w\-]+/?$',
+    r'^https?://(?:www\.)?youtube\.com/@[\w\.\-]+/?$',
     r'^https?://(?:www\.)?youtube\.com/channel/UC[\w\-]+/?$',
-    r'^https?://(?:www\.)?youtube\.com/c/[\w\-]+/?$',
-    r'^https?://(?:www\.)?youtube\.com/user/[\w\-]+/?$',
+    r'^https?://(?:www\.)?youtube\.com/c/[\w\.\-]+/?$',
+    r'^https?://(?:www\.)?youtube\.com/user/[\w\.\-]+/?$',
+]
+
+YOUTUBE_VIDEO_PATTERNS = [
+    r'^https?://(?:www\.)?youtube\.com/watch\?v=([\w\-]+)',
+    r'^https?://youtu\.be/([\w\-]+)',
+    r'^https?://(?:www\.)?youtube\.com/embed/([\w\-]+)',
+    r'^https?://(?:www\.)?youtube\.com/v/([\w\-]+)',
 ]
 
 
@@ -34,6 +41,20 @@ def validate_youtube_url(url: str) -> bool:
         if re.match(pattern, url, re.IGNORECASE):
             return True
     return False
+
+
+def extract_video_id(url: str) -> str | None:
+    """Extract video ID from YouTube video URL."""
+    for pattern in YOUTUBE_VIDEO_PATTERNS:
+        match = re.match(pattern, url, re.IGNORECASE)
+        if match:
+            return match.group(1)
+    return None
+
+
+def is_video_url(url: str) -> bool:
+    """Check if URL is a YouTube video URL."""
+    return extract_video_id(url) is not None
 
 router = APIRouter()
 
@@ -84,6 +105,82 @@ async def get_channel_by_slug(slug: str, db: DB):
         )
 
     return ChannelResponse.model_validate(channel)
+
+
+@router.post("/fetch-video")
+async def fetch_video(
+    request: ChannelFetchRequest,
+    db: DB,
+    _: AdminAuth,
+):
+    """
+    Fetch a single video info from YouTube.
+    Returns video info along with its channel info.
+    """
+    video_id = extract_video_id(request.youtube_url)
+    if not video_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid YouTube video URL.",
+        )
+
+    youtube = YouTubeService()
+
+    try:
+        # Get video info
+        video_info = await youtube.get_video_info(video_id)
+        
+        if not video_info:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Video not found.",
+            )
+
+        # Check if video already exists
+        existing_episode = await db.execute(
+            select(Episode).where(Episode.youtube_id == video_id)
+        )
+        existing_ep = existing_episode.scalar_one_or_none()
+
+        # Check if channel exists
+        existing_channel = None
+        if video_info.channel_id:
+            channel_result = await db.execute(
+                select(Channel).where(
+                    Channel.youtube_channel_id == video_info.channel_id
+                )
+            )
+            existing_channel = channel_result.scalar_one_or_none()
+
+        return {
+            "video": {
+                "youtube_id": video_id,
+                "title": video_info.title,
+                "description": video_info.description,
+                "duration_seconds": video_info.duration_seconds,
+                "published_at": video_info.published_at.isoformat() if video_info.published_at else None,
+                "thumbnail_url": video_info.thumbnail_url,
+                "already_exists": existing_ep is not None,
+                "existing_episode_id": str(existing_ep.id) if existing_ep else None,
+            },
+            "channel": {
+                "name": video_info.channel_name or "Unknown Channel",
+                "youtube_channel_id": video_info.channel_id,
+                "thumbnail_url": None,  # Not available from video info
+                "already_exists": existing_channel is not None,
+                "existing_channel_id": str(existing_channel.id) if existing_channel else None,
+                "existing_channel_slug": existing_channel.slug if existing_channel else None,
+            },
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to fetch video: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to fetch video. Please check the URL and try again."
+        )
 
 
 @router.post("/fetch", response_model=ChannelFetchResponse)

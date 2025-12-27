@@ -1,4 +1,5 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || "change-me-in-production";
 
 class ApiClient {
   private baseUrl: string;
@@ -9,16 +10,23 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    requiresAdmin: boolean = false
   ): Promise<T> {
     const url = `${this.baseUrl}/api${endpoint}`;
 
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(options.headers as Record<string, string>),
+    };
+
+    if (requiresAdmin) {
+      headers["X-Admin-Secret"] = ADMIN_SECRET;
+    }
+
     const response = await fetch(url, {
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -43,10 +51,14 @@ class ApiClient {
   }
 
   async fetchChannel(youtubeUrl: string) {
-    return this.request<any>("/channels/fetch", {
-      method: "POST",
-      body: JSON.stringify({ youtube_url: youtubeUrl }),
-    });
+    return this.request<any>(
+      "/channels/fetch",
+      {
+        method: "POST",
+        body: JSON.stringify({ youtube_url: youtubeUrl }),
+      },
+      true
+    );
   }
 
   async createChannel(data: {
@@ -56,10 +68,14 @@ class ApiClient {
     thumbnail_url?: string;
     speakers?: string[];
   }) {
-    return this.request<any>("/channels", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
+    return this.request<any>(
+      "/channels",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true
+    );
   }
 
   // Episodes
@@ -124,31 +140,47 @@ class ApiClient {
     concurrency: number;
     speakers?: string[];
   }) {
-    return this.request<any>("/batches", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
+    return this.request<any>(
+      "/batches",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true
+    );
   }
 
   async startBatch(id: string) {
-    return this.request<any>(`/batches/${id}/start`, { method: "POST" });
+    return this.request<any>(`/batches/${id}/start`, { method: "POST" }, true);
   }
 
   async pauseBatch(id: string) {
-    return this.request<any>(`/batches/${id}/pause`, { method: "POST" });
+    return this.request<any>(`/batches/${id}/pause`, { method: "POST" }, true);
   }
 
   async resumeBatch(id: string) {
-    return this.request<any>(`/batches/${id}/resume`, { method: "POST" });
+    return this.request<any>(`/batches/${id}/resume`, { method: "POST" }, true);
   }
 
   async cancelBatch(id: string) {
-    return this.request<any>(`/batches/${id}/cancel`, { method: "POST" });
+    return this.request<any>(`/batches/${id}/cancel`, { method: "POST" }, true);
   }
 
   // Jobs
   async retryJob(id: string) {
-    return this.request<any>(`/jobs/${id}/retry`, { method: "POST" });
+    return this.request<any>(`/jobs/${id}/retry`, { method: "POST" }, true);
+  }
+
+  async pauseJob(id: string) {
+    return this.request<any>(`/jobs/${id}/pause`, { method: "POST" }, true);
+  }
+
+  async resumeJob(id: string) {
+    return this.request<any>(`/jobs/${id}/resume`, { method: "POST" }, true);
+  }
+
+  async cancelJob(id: string) {
+    return this.request<any>(`/jobs/${id}/cancel`, { method: "POST" }, true);
   }
 
   // Search
@@ -200,6 +232,70 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(params),
     });
+  }
+
+  // Settings - API Keys
+  async getApiKeyStatus() {
+    return this.request<any[]>("/settings/api-keys", {}, true);
+  }
+
+  async validateApiKey(envVar: string, value: string) {
+    return this.request<{ valid: boolean; error?: string }>(
+      "/settings/api-keys/validate",
+      {
+        method: "POST",
+        body: JSON.stringify({ env_var: envVar, value }),
+      },
+      true
+    );
+  }
+
+  async updateApiKey(envVar: string, value: string) {
+    return this.request<any>(
+      "/settings/api-keys",
+      {
+        method: "POST",
+        body: JSON.stringify({ env_var: envVar, value }),
+      },
+      true
+    );
+  }
+
+  async deleteApiKey(envVar: string) {
+    return this.request<any>(
+      `/settings/api-keys/${envVar}`,
+      { method: "DELETE" },
+      true
+    );
+  }
+
+  // Single Episode - fetch video info
+  async fetchVideo(youtubeUrl: string) {
+    return this.request<any>(
+      "/channels/fetch-video",
+      {
+        method: "POST",
+        body: JSON.stringify({ youtube_url: youtubeUrl }),
+      },
+      true
+    );
+  }
+
+  // Transcribe episodes from podcast page
+  async transcribeEpisodes(params: {
+    channel_id: string;
+    episode_ids: string[];
+    provider: string;
+    concurrency: number;
+  }) {
+    return this.request<any>(
+      "/batches",
+      {
+        method: "POST",
+        body: JSON.stringify(params),
+      },
+      true
+    );
   }
 }
 

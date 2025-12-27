@@ -175,6 +175,76 @@ async def get_job_logs(
     )
 
 
+@router.post("/{job_id}/pause")
+async def pause_job(
+    job_id: UUID,
+    db: DB,
+    _: AdminAuth,
+):
+    """Pause a running job."""
+    result = await db.execute(
+        select(Job).where(Job.id == job_id)
+    )
+    job = result.scalar_one_or_none()
+
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found"
+        )
+
+    if job.status not in ("processing", "transcribing", "downloading", "embedding", "chunking"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot pause job with status: {job.status}"
+        )
+
+    job.status = "paused"
+
+    await db.commit()
+
+    return {"status": "paused", "job_id": str(job_id)}
+
+
+@router.post("/{job_id}/resume")
+async def resume_job(
+    job_id: UUID,
+    db: DB,
+    _: AdminAuth,
+):
+    """Resume a paused job."""
+    result = await db.execute(
+        select(Job).where(Job.id == job_id)
+    )
+    job = result.scalar_one_or_none()
+
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found"
+        )
+
+    if job.status != "paused":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot resume job with status: {job.status}"
+        )
+
+    job.status = "pending"
+    
+    # Update episode status
+    ep_result = await db.execute(
+        select(Episode).where(Episode.id == job.episode_id)
+    )
+    episode = ep_result.scalar_one_or_none()
+    if episode:
+        episode.status = "queued"
+
+    await db.commit()
+
+    return {"status": "pending", "job_id": str(job_id)}
+
+
 @router.post("/{job_id}/cancel")
 async def cancel_job(
     job_id: UUID,
