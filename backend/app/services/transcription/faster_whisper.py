@@ -71,6 +71,7 @@ class FasterWhisperProvider(TranscriptionProvider):
     def supports_diarization(self) -> bool:
         try:
             import importlib.util
+
             return importlib.util.find_spec("pyannote.audio") is not None
         except ImportError:
             return False

@@ -44,6 +44,7 @@ class WhisperProvider(TranscriptionProvider):
         # We use pyannote for this if available
         try:
             import importlib.util
+
             return importlib.util.find_spec("pyannote.audio") is not None
         except ImportError:
             return False

@@ -126,6 +126,7 @@ def get_available_providers() -> list[dict]:
 
     try:
         import importlib.util
+
         if importlib.util.find_spec("whisper") is None:
             raise ImportError()
     except ImportError:
