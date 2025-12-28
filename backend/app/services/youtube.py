@@ -238,6 +238,12 @@ class YouTubeService:
 
         url = f"https://www.youtube.com/watch?v={youtube_id}"
 
+        # Check for cookies file to avoid YouTube bot detection
+        cookies_file = Path("/app/data/youtube_cookies.txt")
+        if not cookies_file.exists():
+            # Also check local dev path
+            cookies_file = Path(__file__).parent.parent.parent / "data" / "youtube_cookies.txt"
+
         ydl_opts = {
             "format": "bestaudio[ext=m4a]/bestaudio/best",
             "postprocessors": [
@@ -259,6 +265,11 @@ class YouTubeService:
             "fragment_retries": 10,
             "ignoreerrors": False,
         }
+
+        # Add cookies if available (required to avoid YouTube bot detection)
+        if cookies_file.exists():
+            ydl_opts["cookiefile"] = str(cookies_file)
+            logger.debug(f"Using cookies from {cookies_file}")
 
         loop = asyncio.get_event_loop()
 

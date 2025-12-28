@@ -62,3 +62,5 @@ data/qdrant/
 # Celery
 celerybeat-schedule
 celerybeat.pid
+backend/data/youtube_cookies.txt
+backend/data/youtube_cookies.txt
