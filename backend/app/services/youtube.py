@@ -238,12 +238,6 @@ class YouTubeService:
 
         url = f"https://www.youtube.com/watch?v={youtube_id}"
 
-        # Check for cookies file to avoid YouTube bot detection
-        cookies_file = Path("/app/data/youtube_cookies.txt")
-        if not cookies_file.exists():
-            # Also check local dev path
-            cookies_file = Path(__file__).parent.parent.parent / "data" / "youtube_cookies.txt"
-
         ydl_opts = {
             "format": "bestaudio[ext=m4a]/bestaudio/best",
             "postprocessors": [
@@ -266,16 +260,45 @@ class YouTubeService:
             "ignoreerrors": False,
         }
 
-        # Add cookies if available (required to avoid YouTube bot detection)
+        # YouTube bot detection workaround - try multiple methods
+        # Method 1: Check for exported cookies file
+        cookies_file = Path("/app/data/youtube_cookies.txt")
+        if not cookies_file.exists():
+            cookies_file = Path(__file__).parent.parent.parent / "data" / "youtube_cookies.txt"
+
         if cookies_file.exists():
             ydl_opts["cookiefile"] = str(cookies_file)
             logger.debug(f"Using cookies from {cookies_file}")
+        else:
+            # Method 2: Try browser cookies directly (works for local/native runs)
+            # Try common browsers in order of preference
+            for browser in ["chrome", "firefox", "edge", "safari", "brave"]:
+                try:
+                    ydl_opts["cookiesfrombrowser"] = (browser,)
+                    logger.debug(f"Trying cookies from {browser} browser")
+                    break
+                except Exception:
+                    continue
 
         loop = asyncio.get_event_loop()
 
         def download():
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([url])
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([url])
+            except Exception as e:
+                error_str = str(e)
+                # Check for YouTube bot detection error
+                if "Sign in to confirm" in error_str or "bot" in error_str.lower():
+                    raise RuntimeError(
+                        f"YouTube bot detection triggered. To fix:\n"
+                        f"1. Run: yt-dlp --cookies-from-browser chrome "
+                        f"--cookies backend/data/youtube_cookies.txt "
+                        f"'https://youtube.com'\n"
+                        f"2. Restart the app\n"
+                        f"Original error: {error_str}"
+                    ) from e
+                raise
 
         await loop.run_in_executor(None, download)
 
