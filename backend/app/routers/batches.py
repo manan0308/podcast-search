@@ -481,6 +481,70 @@ async def cancel_batch(
     return {"status": "cancelled", "batch_id": str(batch_id)}
 
 
+@router.post("/{batch_id}/retry")
+async def retry_batch(
+    batch_id: UUID,
+    db: DB,
+    background_tasks: BackgroundTasks,
+    _: AdminAuth,
+):
+    """Retry all failed/cancelled jobs in a batch."""
+    result = await db.execute(
+        select(Batch).where(Batch.id == batch_id)
+    )
+    batch = result.scalar_one_or_none()
+
+    if not batch:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Batch not found"
+        )
+
+    # Get failed/cancelled jobs
+    jobs_result = await db.execute(
+        select(Job).where(
+            Job.batch_id == batch_id,
+            Job.status.in_(["failed", "cancelled"])
+        )
+    )
+    jobs = jobs_result.scalars().all()
+
+    if not jobs:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No failed or cancelled jobs to retry"
+        )
+
+    # Reset jobs to pending
+    retry_count = 0
+    for job in jobs:
+        job.status = "pending"
+        job.error_message = None
+        job.started_at = None
+        job.completed_at = None
+        job.progress = 0
+        job.current_step = None
+        retry_count += 1
+
+    # Reset batch status if it was failed/cancelled
+    if batch.status in ("failed", "cancelled", "completed"):
+        batch.status = "running"
+        batch.completed_at = None
+        batch.failed_episodes = max(0, batch.failed_episodes - retry_count)
+
+    await db.commit()
+
+    # Start batch processing
+    from app.workers.batch_processor import process_batch
+    background_tasks.add_task(process_batch, str(batch_id))
+
+    return {
+        "status": "retrying",
+        "batch_id": str(batch_id),
+        "jobs_retried": retry_count
+    }
+
+
 @router.delete("/{batch_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_batch(
     batch_id: UUID,

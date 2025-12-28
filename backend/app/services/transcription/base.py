@@ -84,11 +84,13 @@ class TranscriptionProvider(ABC):
     async def wait_for_completion(
         self,
         provider_job_id: str,
-        poll_interval: float = 5.0,
+        initial_poll_interval: float = 5.0,
+        max_poll_interval: float = 30.0,
         timeout: float = 3600.0
     ) -> TranscriptResult:
-        """Wait for job to complete, polling periodically."""
+        """Wait for job to complete with exponential backoff polling."""
         elapsed = 0.0
+        poll_interval = initial_poll_interval
 
         while elapsed < timeout:
             result = await self.get_status(provider_job_id)
@@ -101,6 +103,8 @@ class TranscriptionProvider(ABC):
 
             await asyncio.sleep(poll_interval)
             elapsed += poll_interval
+            # Exponential backoff: increase interval by 1.5x, capped at max
+            poll_interval = min(poll_interval * 1.5, max_poll_interval)
 
         return TranscriptResult(
             provider_job_id=provider_job_id,

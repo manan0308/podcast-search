@@ -5,7 +5,7 @@ from typing import Optional
 from celery.utils.log import get_task_logger
 
 from app.celery_app import celery_app
-from app.services.cache import CacheService
+from app.services.cache import CacheService, EmbeddingCache
 from app.services.embedding import EmbeddingService
 from app.tasks.async_helpers import run_async  # Efficient async runner
 
@@ -28,41 +28,44 @@ def embed_chunks_task(self, chunks: list[dict]) -> list[list[float]]:
     """
     Generate embeddings for a list of chunks.
 
-    Uses caching to avoid re-embedding identical text.
+    Uses batched caching to avoid re-embedding identical text.
     """
     logger.info(f"Embedding {len(chunks)} chunks")
 
     async def _embed():
-        cache = CacheService()
+        embedding_cache = EmbeddingCache()
         embedding_service = EmbeddingService()
 
         texts = [c["text"] for c in chunks]
+
+        # Batch check cache for all texts at once
+        cached_embeddings = await embedding_cache.get_many(texts)
+
+        # Separate hits from misses
         embeddings = []
         texts_to_embed = []
         text_indices = []
 
-        # Check cache first
         for i, text in enumerate(texts):
-            cache_key = get_embedding_cache_key(text)
-            cached = await cache.get(cache_key)
-
-            if cached:
-                embeddings.append((i, json.loads(cached)))
+            if text in cached_embeddings:
+                embeddings.append((i, cached_embeddings[text]))
             else:
                 texts_to_embed.append(text)
                 text_indices.append(i)
 
         logger.info(f"Cache hits: {len(embeddings)}, misses: {len(texts_to_embed)}")
 
-        # Generate embeddings for cache misses
+        # Generate embeddings for cache misses using parallel method
         if texts_to_embed:
-            new_embeddings = await embedding_service.embed_texts(texts_to_embed)
+            new_embeddings = await embedding_service.embed_texts_parallel(texts_to_embed, max_concurrent=5)
 
-            # Cache and collect results
-            for idx, (text, emb) in enumerate(zip(texts_to_embed, new_embeddings)):
-                cache_key = get_embedding_cache_key(text)
-                await cache.set(cache_key, json.dumps(emb), ttl=86400 * 7)  # 7 days
-                embeddings.append((text_indices[idx], emb))
+            # Batch cache new embeddings
+            new_cache_entries = {text: emb for text, emb in zip(texts_to_embed, new_embeddings)}
+            await embedding_cache.set_many(new_cache_entries)
+
+            # Collect results
+            for idx, emb in zip(text_indices, new_embeddings):
+                embeddings.append((idx, emb))
 
         # Sort by original index and return
         embeddings.sort(key=lambda x: x[0])

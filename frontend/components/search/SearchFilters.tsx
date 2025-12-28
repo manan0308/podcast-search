@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useCallback, memo } from "react";
 import { Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,41 +11,47 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { api } from "@/lib/api";
-import type { SearchFilters as Filters, Channel } from "@/lib/types";
+import { useChannels, useSpeakers } from "@/lib/hooks";
+import type { SearchFilters as Filters } from "@/lib/types";
 
 interface SearchFiltersProps {
   filters: Filters;
   onChange: (filters: Filters) => void;
 }
 
-export function SearchFilters({ filters, onChange }: SearchFiltersProps) {
-  const [speakers, setSpeakers] = useState<string[]>([]);
-  const [channels, setChannels] = useState<Channel[]>([]);
+function SearchFiltersComponent({ filters, onChange }: SearchFiltersProps) {
   const [showFilters, setShowFilters] = useState(false);
 
-  useEffect(() => {
-    loadFilterOptions();
-  }, []);
+  // Use SWR hooks - data is cached and deduplicated
+  const { data: speakersData } = useSpeakers();
+  const { data: channelsData } = useChannels();
 
-  const loadFilterOptions = async () => {
-    try {
-      const [speakersRes, channelsRes] = await Promise.all([
-        api.getSpeakers(),
-        api.getChannels(),
-      ]);
-      setSpeakers(speakersRes.speakers || []);
-      setChannels(channelsRes.channels || []);
-    } catch (error) {
-      console.error("Failed to load filter options:", error);
-    }
-  };
+  const speakers = speakersData?.speakers || [];
+  const channels = channelsData?.channels || [];
 
   const hasActiveFilters = filters.speaker || filters.channel_slug;
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     onChange({});
-  };
+  }, [onChange]);
+
+  const handleSpeakerChange = useCallback((value: string) => {
+    onChange({
+      ...filters,
+      speaker: value === "all" ? undefined : value,
+    });
+  }, [filters, onChange]);
+
+  const handleChannelChange = useCallback((value: string) => {
+    onChange({
+      ...filters,
+      channel_slug: value === "all" ? undefined : value,
+    });
+  }, [filters, onChange]);
+
+  const toggleFilters = useCallback(() => {
+    setShowFilters(prev => !prev);
+  }, []);
 
   return (
     <div className="mt-4">
@@ -54,7 +60,7 @@ export function SearchFilters({ filters, onChange }: SearchFiltersProps) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setShowFilters(!showFilters)}
+          onClick={toggleFilters}
           className="text-muted-foreground"
         >
           <Filter className="h-4 w-4 mr-2" />
@@ -87,19 +93,14 @@ export function SearchFilters({ filters, onChange }: SearchFiltersProps) {
             <label className="text-sm font-medium mb-1 block">Speaker</label>
             <Select
               value={filters.speaker || "all"}
-              onValueChange={(value) =>
-                onChange({
-                  ...filters,
-                  speaker: value === "all" ? undefined : value,
-                })
-              }
+              onValueChange={handleSpeakerChange}
             >
               <SelectTrigger>
                 <SelectValue placeholder="All speakers" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All speakers</SelectItem>
-                {speakers.map((speaker) => (
+                {speakers.map((speaker: string) => (
                   <SelectItem key={speaker} value={speaker}>
                     {speaker}
                   </SelectItem>
@@ -113,19 +114,14 @@ export function SearchFilters({ filters, onChange }: SearchFiltersProps) {
             <label className="text-sm font-medium mb-1 block">Podcast</label>
             <Select
               value={filters.channel_slug || "all"}
-              onValueChange={(value) =>
-                onChange({
-                  ...filters,
-                  channel_slug: value === "all" ? undefined : value,
-                })
-              }
+              onValueChange={handleChannelChange}
             >
               <SelectTrigger>
                 <SelectValue placeholder="All podcasts" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All podcasts</SelectItem>
-                {channels.map((channel) => (
+                {channels.map((channel: any) => (
                   <SelectItem key={channel.slug} value={channel.slug}>
                     {channel.name}
                   </SelectItem>
@@ -138,3 +134,6 @@ export function SearchFilters({ filters, onChange }: SearchFiltersProps) {
     </div>
   );
 }
+
+// Memoize to prevent unnecessary re-renders
+export const SearchFilters = memo(SearchFiltersComponent);

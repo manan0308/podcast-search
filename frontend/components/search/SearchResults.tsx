@@ -1,8 +1,9 @@
 "use client";
 
+import { memo, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ExternalLink, Clock, User, Quote } from "lucide-react";
+import { ExternalLink, Clock, User } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -56,31 +57,41 @@ export function SearchResults({ results, query }: SearchResultsProps) {
   );
 }
 
-function SearchResultCard({
+// Memoized search result card
+const SearchResultCard = memo(function SearchResultCard({
   result,
   query,
 }: {
   result: SearchResult;
   query: string;
 }) {
-  const highlightText = (text: string, query: string) => {
-    if (!query) return text;
+  // Memoize highlighted text to avoid recalculation on every render
+  const highlightedText = useMemo(() => {
+    if (!query) return result.text;
 
-    const parts = text.split(new RegExp(`(${query})`, "gi"));
-    return parts.map((part, i) =>
-      part.toLowerCase() === query.toLowerCase() ? (
-        <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 rounded px-0.5">
-          {part}
-        </mark>
-      ) : (
-        part
-      )
-    );
-  };
+    try {
+      const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const parts = result.text.split(new RegExp(`(${escapedQuery})`, "gi"));
+      return parts.map((part, i) =>
+        part.toLowerCase() === query.toLowerCase() ? (
+          <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 rounded px-0.5">
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      );
+    } catch {
+      return result.text;
+    }
+  }, [result.text, query]);
 
-  const youtubeLink = result.episode_url
-    ? `${result.episode_url}&t=${Math.floor(result.timestamp_ms / 1000)}`
-    : null;
+  const youtubeLink = useMemo(() => {
+    if (!result.episode_url) return null;
+    return `${result.episode_url}&t=${Math.floor(result.timestamp_ms / 1000)}`;
+  }, [result.episode_url, result.timestamp_ms]);
+
+  const scorePercent = useMemo(() => (result.score * 100).toFixed(0), [result.score]);
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -98,6 +109,8 @@ function SearchResultCard({
                 width={120}
                 height={68}
                 className="rounded object-cover"
+                loading="lazy"
+                placeholder="empty"
               />
             </Link>
           )}
@@ -129,7 +142,7 @@ function SearchResultCard({
 
               {/* Score Badge */}
               <Badge variant="secondary" className="shrink-0">
-                {(result.score * 100).toFixed(0)}% match
+                {scorePercent}% match
               </Badge>
             </div>
 
@@ -148,7 +161,7 @@ function SearchResultCard({
 
             {/* Text */}
             <p className="text-sm text-muted-foreground line-clamp-3">
-              {highlightText(result.text, query)}
+              {highlightedText}
             </p>
 
             {/* Context */}
@@ -198,4 +211,4 @@ function SearchResultCard({
       </CardContent>
     </Card>
   );
-}
+});

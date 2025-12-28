@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Clock, Play, Pause, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Clock, Play, Pause, CheckCircle, XCircle, Loader2, RotateCcw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -89,6 +89,12 @@ export function BatchCard({ batch, onUpdate }: BatchCardProps) {
     }
   };
 
+  const handleRetry = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    await api.retryBatch(batch.id);
+    onUpdate?.();
+  };
+
   return (
     <Link href={`/admin/batches/${batch.id}`}>
       <Card className="hover:shadow-md transition-shadow">
@@ -160,6 +166,11 @@ export function BatchCard({ batch, onUpdate }: BatchCardProps) {
               {["pending", "processing", "paused"].includes(batch.status) && (
                 <Button size="sm" variant="outline" onClick={handleCancel}>
                   <XCircle className="h-4 w-4" />
+                </Button>
+              )}
+              {(batch.status === "failed" || batch.status === "cancelled" || batch.failed_episodes > 0) && (
+                <Button size="sm" variant="outline" onClick={handleRetry} title="Retry failed jobs">
+                  <RotateCcw className="h-4 w-4" />
                 </Button>
               )}
             </div>

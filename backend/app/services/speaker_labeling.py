@@ -14,7 +14,8 @@ class SpeakerLabelingService:
     """
 
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        # Use async client to avoid blocking the event loop
+        self.client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
         self.model = settings.ANTHROPIC_MODEL
 
     async def identify_speakers(
@@ -60,7 +61,7 @@ class SpeakerLabelingService:
         logger.info(f"Identifying {len(unique_speakers)} speakers using Claude")
 
         try:
-            response = self.client.messages.create(
+            response = await self.client.messages.create(
                 model=self.model,
                 max_tokens=1024,
                 messages=[{"role": "user", "content": prompt}],

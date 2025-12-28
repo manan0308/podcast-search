@@ -158,21 +158,45 @@ class EmbeddingCache:
         return await self.cache.set_json(self._key(text), embedding, self.ttl)
 
     async def get_many(self, texts: list[str]) -> dict[str, list[float]]:
-        """Get multiple cached embeddings."""
-        results = {}
-        for text in texts:
-            emb = await self.get(text)
-            if emb:
-                results[text] = emb
-        return results
+        """Get multiple cached embeddings using batch MGET."""
+        if not texts:
+            return {}
+
+        try:
+            r = await self.cache._get_redis()
+            keys = [self._key(text) for text in texts]
+            values = await r.mget(keys)
+
+            results = {}
+            for text, value in zip(texts, values):
+                if value:
+                    try:
+                        results[text] = json.loads(value)
+                    except json.JSONDecodeError:
+                        pass
+            return results
+        except Exception as e:
+            logger.warning(f"Batch cache get error: {e}")
+            return {}
 
     async def set_many(self, embeddings: dict[str, list[float]]) -> int:
-        """Cache multiple embeddings."""
-        cached = 0
-        for text, emb in embeddings.items():
-            if await self.set(text, emb):
-                cached += 1
-        return cached
+        """Cache multiple embeddings using pipeline."""
+        if not embeddings:
+            return 0
+
+        try:
+            r = await self.cache._get_redis()
+            pipe = r.pipeline()
+
+            for text, emb in embeddings.items():
+                key = self._key(text)
+                pipe.setex(key, self.ttl, json.dumps(emb))
+
+            await pipe.execute()
+            return len(embeddings)
+        except Exception as e:
+            logger.warning(f"Batch cache set error: {e}")
+            return 0
 
 
 class SearchCache:

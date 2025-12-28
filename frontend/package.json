@@ -30,7 +30,8 @@
     "clsx": "^2.1.0",
     "lucide-react": "^0.323.0",
     "tailwind-merge": "^2.2.1",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "swr": "^2.2.5"
   },
   "devDependencies": {
     "@types/node": "^20.11.16",

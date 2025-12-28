@@ -90,6 +90,8 @@ class TranscriptionPipeline:
             # Step 2: Transcribe
             transcript = await self._transcribe(audio_path, job)
             await self._log(job, "info", f"Transcription complete: {len(transcript.utterances or [])} utterances")
+            # Checkpoint commit after transcription (expensive operation) to save progress
+            await self.db.commit()
 
             # Step 3: Speaker labeling
             await self._update_job(job, status="labeling", progress=50, step="Identifying speakers")
@@ -105,6 +107,8 @@ class TranscriptionPipeline:
             # Step 4: Save utterances
             await self._save_utterances(episode, labeled_utterances)
             await self._log(job, "info", f"Saved {len(labeled_utterances)} utterances")
+            # Checkpoint commit after saving utterances (before expensive embedding)
+            await self.db.commit()
 
             # Step 5: Chunking (with contextual headers for better embeddings)
             await self._update_job(job, status="chunking", progress=65, step="Creating chunks")
@@ -208,6 +212,7 @@ class TranscriptionPipeline:
         progress: int | None = None,
         step: str | None = None,
         cost_cents: int | None = None,
+        commit: bool = False,
     ):
         if status:
             job.status = status
@@ -221,7 +226,9 @@ class TranscriptionPipeline:
         if status == "downloading" and not job.started_at:
             job.started_at = datetime.utcnow()
 
-        await self.db.commit()
+        # Only commit if explicitly requested to reduce transaction overhead
+        if commit:
+            await self.db.commit()
 
         # Publish WebSocket update (fire and forget)
         try:
@@ -237,7 +244,7 @@ class TranscriptionPipeline:
         except Exception as e:
             logger.warning(f"Failed to publish job update: {e}")
 
-    async def _log(self, job: Job, level: str, message: str, metadata: dict = None):
+    async def _log(self, job: Job, level: str, message: str, metadata: dict = None, commit: bool = False):
         log = ActivityLog(
             batch_id=job.batch_id,
             job_id=job.id,
@@ -247,7 +254,9 @@ class TranscriptionPipeline:
             metadata=metadata or {},
         )
         self.db.add(log)
-        await self.db.commit()
+        # Only commit if explicitly requested to reduce transaction overhead
+        if commit:
+            await self.db.commit()
 
     async def _download_audio(self, episode: Episode) -> Path:
         audio_path = await self.youtube.download_audio(episode.youtube_id)
@@ -264,9 +273,8 @@ class TranscriptionPipeline:
         if result.status == TranscriptionStatus.FAILED:
             raise Exception(f"Transcription failed: {result.error_message}")
 
-        # Update job with provider job ID
+        # Update job with provider job ID (don't commit - let main pipeline commit)
         job.provider_job_id = result.provider_job_id
-        await self.db.commit()
 
         return result
 
@@ -294,7 +302,7 @@ class TranscriptionPipeline:
 
         return labeled
 
-    async def _save_utterances(self, episode: Episode, utterances: list[dict]):
+    async def _save_utterances(self, episode: Episode, utterances: list[dict], commit: bool = False):
         # Delete existing utterances
         from sqlalchemy import delete
         await self.db.execute(
@@ -315,7 +323,9 @@ class TranscriptionPipeline:
             )
             self.db.add(db_utterance)
 
-        await self.db.commit()
+        # Only commit if explicitly requested
+        if commit:
+            await self.db.commit()
 
     async def _embed_and_store(
         self,
@@ -328,8 +338,9 @@ class TranscriptionPipeline:
 
         # Generate embeddings using enriched text with contextual headers
         # This improves retrieval by embedding the full context (episode/speaker/channel)
+        # Use parallel embedding for faster processing
         texts = [c.text_for_embedding for c in chunks]
-        embeddings = await self.embedding.embed_texts(texts)
+        embeddings = await self.embedding.embed_texts_parallel(texts, max_concurrent=5)
 
         # Prepare chunk data for Qdrant
         chunk_data = []
@@ -377,7 +388,7 @@ class TranscriptionPipeline:
             )
             self.db.add(db_chunk)
 
-        await self.db.commit()
+        # Don't commit here - let the main pipeline commit at the end
         return chunk_data
 
     async def _save_transcript_backup(

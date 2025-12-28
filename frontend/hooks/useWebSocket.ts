@@ -61,22 +61,48 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const mountedRef = useRef(true);
+
+  // Use refs for callbacks to avoid reconnection on callback changes
+  const onMessageRef = useRef(onMessage);
+  const onConnectRef = useRef(onConnect);
+  const onDisconnectRef = useRef(onDisconnect);
+
+  // Update refs when callbacks change (without causing reconnection)
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
+
+  useEffect(() => {
+    onConnectRef.current = onConnect;
+  }, [onConnect]);
+
+  useEffect(() => {
+    onDisconnectRef.current = onDisconnect;
+  }, [onDisconnect]);
+
+  // Stable channel string for dependency
+  const channelString = channels.join(",");
 
   const connect = useCallback(() => {
+    if (!mountedRef.current) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       return;
     }
 
-    const channelParam = channels.join(",");
-    const wsUrl = `${WS_URL}/api/ws?channels=${encodeURIComponent(channelParam)}`;
+    const wsUrl = `${WS_URL}/api/ws?channels=${encodeURIComponent(channelString)}`;
 
     try {
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
+        if (!mountedRef.current) {
+          ws.close();
+          return;
+        }
         setIsConnected(true);
         reconnectAttemptsRef.current = 0;
-        onConnect?.();
+        onConnectRef.current?.();
 
         // Start ping interval to keep connection alive
         pingIntervalRef.current = setInterval(() => {
@@ -96,7 +122,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
           }
 
           setLastMessage(message);
-          onMessage?.(message);
+          onMessageRef.current?.(message);
         } catch (e) {
           console.error("Failed to parse WebSocket message:", e);
         }
@@ -104,17 +130,22 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
       ws.onclose = () => {
         setIsConnected(false);
-        onDisconnect?.();
+        onDisconnectRef.current?.();
 
         // Clear ping interval
         if (pingIntervalRef.current) {
           clearInterval(pingIntervalRef.current);
+          pingIntervalRef.current = null;
         }
 
-        // Attempt reconnection
-        if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+        // Attempt reconnection only if component is mounted
+        if (mountedRef.current && reconnectAttemptsRef.current < maxReconnectAttempts) {
           reconnectAttemptsRef.current += 1;
-          reconnectTimeoutRef.current = setTimeout(connect, reconnectInterval);
+          reconnectTimeoutRef.current = setTimeout(() => {
+            if (mountedRef.current) {
+              connect();
+            }
+          }, reconnectInterval);
         }
       };
 
@@ -126,14 +157,16 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     } catch (e) {
       console.error("Failed to create WebSocket:", e);
     }
-  }, [channels, onMessage, onConnect, onDisconnect, reconnectInterval, maxReconnectAttempts]);
+  }, [channelString, reconnectInterval, maxReconnectAttempts]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
     }
     if (pingIntervalRef.current) {
       clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = null;
     }
     if (wsRef.current) {
       wsRef.current.close();
@@ -160,8 +193,13 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     connect();
-    return () => disconnect();
+
+    return () => {
+      mountedRef.current = false;
+      disconnect();
+    };
   }, [connect, disconnect]);
 
   return {
@@ -178,18 +216,24 @@ export function useBatchUpdates(batchId: string, onUpdate?: (update: BatchUpdate
   const [jobs, setJobs] = useState<Record<string, JobUpdate>>({});
   const [batchStatus, setBatchStatus] = useState<BatchUpdate | null>(null);
 
+  // Use ref for onUpdate to prevent reconnection
+  const onUpdateRef = useRef(onUpdate);
+  useEffect(() => {
+    onUpdateRef.current = onUpdate;
+  }, [onUpdate]);
+
   const handleMessage = useCallback((message: WebSocketMessage) => {
     if (message.type === "job_update" && message.batch_id === batchId) {
       setJobs((prev) => ({
         ...prev,
         [message.job_id]: message as JobUpdate,
       }));
-      onUpdate?.(message);
+      onUpdateRef.current?.(message);
     } else if (message.type === "batch_update" && message.batch_id === batchId) {
       setBatchStatus(message as BatchUpdate);
-      onUpdate?.(message);
+      onUpdateRef.current?.(message);
     }
-  }, [batchId, onUpdate]);
+  }, [batchId]);
 
   const { isConnected } = useWebSocket({
     channels: [`batch:${batchId}`, "updates"],
@@ -207,12 +251,18 @@ export function useBatchUpdates(batchId: string, onUpdate?: (update: BatchUpdate
 export function useJobUpdates(jobId: string, onUpdate?: (update: JobUpdate) => void) {
   const [status, setStatus] = useState<JobUpdate | null>(null);
 
+  // Use ref for onUpdate to prevent reconnection
+  const onUpdateRef = useRef(onUpdate);
+  useEffect(() => {
+    onUpdateRef.current = onUpdate;
+  }, [onUpdate]);
+
   const handleMessage = useCallback((message: WebSocketMessage) => {
     if (message.type === "job_update" && message.job_id === jobId) {
       setStatus(message as JobUpdate);
-      onUpdate?.(message as JobUpdate);
+      onUpdateRef.current?.(message as JobUpdate);
     }
-  }, [jobId, onUpdate]);
+  }, [jobId]);
 
   const { isConnected } = useWebSocket({
     channels: [`job:${jobId}`],

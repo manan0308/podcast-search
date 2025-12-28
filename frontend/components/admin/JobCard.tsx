@@ -65,6 +65,12 @@ const statusConfig = {
     bg: "bg-red-500/10",
     label: "Failed",
   },
+  cancelled: {
+    icon: XCircle,
+    color: "text-gray-500",
+    bg: "bg-gray-500/10",
+    label: "Cancelled",
+  },
 };
 
 const stageOrder = ["downloading", "transcribing", "labeling", "chunking", "embedding", "completed"];
@@ -76,7 +82,7 @@ export function JobCard({ job, onUpdate }: JobCardProps) {
   const stageIndex = stageOrder.indexOf(job.status);
   const progress = job.status === "completed"
     ? 100
-    : job.status === "failed" || job.status === "pending"
+    : job.status === "failed" || job.status === "pending" || job.status === "cancelled"
     ? 0
     : Math.round(((stageIndex + 1) / stageOrder.length) * 100);
 
@@ -131,7 +137,7 @@ export function JobCard({ job, onUpdate }: JobCardProps) {
               >
                 <StatusIcon
                   className={`h-3 w-3 mr-1 ${
-                    !["completed", "failed", "pending"].includes(job.status)
+                    !["completed", "failed", "pending", "cancelled"].includes(job.status)
                       ? "animate-spin"
                       : ""
                   }`}
@@ -141,7 +147,7 @@ export function JobCard({ job, onUpdate }: JobCardProps) {
             </div>
 
             {/* Progress */}
-            {!["completed", "failed", "pending"].includes(job.status) && (
+            {!["completed", "failed", "pending", "cancelled"].includes(job.status) && (
               <div className="mb-2">
                 <Progress value={progress} className="h-1" />
               </div>
@@ -165,7 +171,7 @@ export function JobCard({ job, onUpdate }: JobCardProps) {
               </div>
 
               {/* Actions */}
-              {job.status === "failed" && (
+              {(job.status === "failed" || job.status === "cancelled") && (
                 <Button size="sm" variant="outline" onClick={handleRetry}>
                   <RotateCcw className="h-3 w-3 mr-1" />
                   Retry

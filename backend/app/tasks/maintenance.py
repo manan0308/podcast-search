@@ -1,5 +1,4 @@
 """Maintenance tasks for Celery."""
-import asyncio
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -12,18 +11,9 @@ from app.config import settings
 from app.database import async_session_factory
 from app.models import Channel, Episode, Chunk
 from app.services.cache import CacheService
+from app.tasks.async_helpers import run_async  # Use the efficient async runner
 
 logger = get_task_logger(__name__)
-
-
-def run_async(coro):
-    """Run async function in sync context."""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
 
 
 @celery_app.task(

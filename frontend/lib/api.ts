@@ -166,6 +166,10 @@ class ApiClient {
     return this.request<any>(`/batches/${id}/cancel`, { method: "POST" }, true);
   }
 
+  async retryBatch(id: string) {
+    return this.request<any>(`/batches/${id}/retry`, { method: "POST" }, true);
+  }
+
   // Jobs
   async retryJob(id: string) {
     return this.request<any>(`/jobs/${id}/retry`, { method: "POST" }, true);

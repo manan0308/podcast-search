@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -17,23 +17,15 @@ import {
   ArrowRight,
   FileText,
   Radio,
-  BarChart3,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { SearchResults, SearchResultSkeleton } from "@/components/search/SearchResults";
 import { SearchFilters } from "@/components/search/SearchFilters";
 import { api } from "@/lib/api";
-import type { SearchResult, SearchFilters as Filters, Channel, Episode } from "@/lib/types";
-
-interface Stats {
-  total_channels: number;
-  total_episodes: number;
-  transcribed_episodes: number;
-  total_hours: number;
-}
+import { useHomeData } from "@/lib/hooks";
+import type { SearchResult, SearchFilters as Filters, Channel } from "@/lib/types";
 
 export default function HomePage() {
   const [query, setQuery] = useState("");
@@ -43,53 +35,37 @@ export default function HomePage() {
   const [filters, setFilters] = useState<Filters>({});
   const [processingTime, setProcessingTime] = useState<number | null>(null);
 
-  // Stats and content
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [recentChannels, setRecentChannels] = useState<Channel[]>([]);
-  const [loadingStats, setLoadingStats] = useState(true);
+  // Use SWR for data fetching with caching
+  const { channels, isLoading: loadingStats } = useHomeData();
 
-  useEffect(() => {
-    loadStats();
-  }, []);
+  // Memoize computed values
+  const stats = useMemo(() => {
+    if (!channels || channels.length === 0) return null;
 
-  const loadStats = async () => {
-    try {
-      const [channelsRes, statsRes] = await Promise.all([
-        api.getChannels(),
-        api.getSearchStats().catch(() => null),
-      ]);
+    const totalEpisodes = channels.reduce(
+      (sum: number, c: Channel) => sum + c.episode_count,
+      0
+    );
+    const transcribed = channels.reduce(
+      (sum: number, c: Channel) => sum + c.transcribed_count,
+      0
+    );
+    const totalHours = channels.reduce(
+      (sum: number, c: Channel) => sum + c.total_duration_seconds / 3600,
+      0
+    );
 
-      setRecentChannels(channelsRes.channels.slice(0, 4));
+    return {
+      total_channels: channels.length,
+      total_episodes: totalEpisodes,
+      transcribed_episodes: transcribed,
+      total_hours: Math.round(totalHours),
+    };
+  }, [channels]);
 
-      // Calculate stats
-      const channels = channelsRes.channels;
-      const totalEpisodes = channels.reduce(
-        (sum: number, c: Channel) => sum + c.episode_count,
-        0
-      );
-      const transcribed = channels.reduce(
-        (sum: number, c: Channel) => sum + c.transcribed_count,
-        0
-      );
-      const totalHours = channels.reduce(
-        (sum: number, c: Channel) => sum + c.total_duration_seconds / 3600,
-        0
-      );
+  const recentChannels = useMemo(() => channels.slice(0, 4), [channels]);
 
-      setStats({
-        total_channels: channels.length,
-        total_episodes: totalEpisodes,
-        transcribed_episodes: transcribed,
-        total_hours: Math.round(totalHours),
-      });
-    } catch (error) {
-      console.error("Failed to load stats:", error);
-    } finally {
-      setLoadingStats(false);
-    }
-  };
-
-  const handleSearch = async (e?: React.FormEvent) => {
+  const handleSearch = useCallback(async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!query.trim()) return;
 
@@ -111,10 +87,14 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [query, filters]);
+
+  const handleFiltersChange = useCallback((newFilters: Filters) => {
+    setFilters(newFilters);
+  }, []);
 
   const hasContent = stats && stats.transcribed_episodes > 0;
-  const isEmpty = !loadingStats && stats && stats.total_channels === 0;
+  const isEmpty = !loadingStats && (!stats || stats.total_channels === 0);
 
   return (
     <div className="container py-8">
@@ -230,7 +210,7 @@ export default function HomePage() {
                 )}
               </Button>
             </div>
-            {hasContent && <SearchFilters filters={filters} onChange={setFilters} />}
+            {hasContent && <SearchFilters filters={filters} onChange={handleFiltersChange} />}
           </form>
 
           {/* No Transcripts Yet Message */}
@@ -291,21 +271,21 @@ export default function HomePage() {
           {/* Initial State - Stats & Quick Actions */}
           {!searched && (
             <div className="max-w-5xl mx-auto">
-              {/* Stats Cards */}
+              {/* Stats Cards - Fixed height to prevent layout shift */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <Card>
+                <Card className="min-h-[100px]">
                   <CardContent className="pt-6">
                     <div className="text-3xl font-bold">{stats?.total_channels || 0}</div>
                     <p className="text-sm text-muted-foreground">Podcasts</p>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card className="min-h-[100px]">
                   <CardContent className="pt-6">
                     <div className="text-3xl font-bold">{stats?.total_episodes || 0}</div>
                     <p className="text-sm text-muted-foreground">Episodes</p>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card className="min-h-[100px]">
                   <CardContent className="pt-6">
                     <div className="text-3xl font-bold text-green-600">
                       {stats?.transcribed_episodes || 0}
@@ -313,7 +293,7 @@ export default function HomePage() {
                     <p className="text-sm text-muted-foreground">Transcribed</p>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card className="min-h-[100px]">
                   <CardContent className="pt-6">
                     <div className="text-3xl font-bold">{stats?.total_hours || 0}h</div>
                     <p className="text-sm text-muted-foreground">Audio</p>
@@ -382,6 +362,8 @@ export default function HomePage() {
                                   width={48}
                                   height={48}
                                   className="rounded-full"
+                                  placeholder="empty"
+                                  loading="lazy"
                                 />
                               ) : (
                                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
