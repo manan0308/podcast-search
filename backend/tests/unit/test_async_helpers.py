@@ -1,4 +1,5 @@
 """Tests for async helpers used in Celery tasks."""
+
 import asyncio
 import pytest
 from unittest.mock import patch, MagicMock
@@ -35,6 +36,7 @@ class TestAsyncHelpers:
 
     def test_run_async_executes_coroutine(self):
         """Test that run_async properly executes a coroutine."""
+
         async def sample_coro():
             await asyncio.sleep(0)
             return "success"
@@ -46,6 +48,7 @@ class TestAsyncHelpers:
 
     def test_run_async_handles_exceptions(self):
         """Test that run_async properly propagates exceptions."""
+
         async def failing_coro():
             raise ValueError("test error")
 
@@ -56,6 +59,7 @@ class TestAsyncHelpers:
 
     def test_run_async_with_db_operations(self):
         """Test run_async with database-like async operations."""
+
         async def mock_db_operation():
             await asyncio.sleep(0.01)
             return {"id": 1, "name": "test"}
@@ -124,8 +128,7 @@ class TestProviderFactory:
 
         providers = get_available_providers()
         faster_whisper = next(
-            (p for p in providers if p["name"] == "faster-whisper"),
-            None
+            (p for p in providers if p["name"] == "faster-whisper"), None
         )
 
         assert faster_whisper is not None

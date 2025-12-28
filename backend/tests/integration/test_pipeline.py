@@ -3,6 +3,7 @@ Integration tests for the transcription pipeline.
 
 Uses mocks for external services (YouTube, transcription, embeddings).
 """
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -64,10 +65,12 @@ def mock_speaker_labeling():
     """Mock speaker labeling service."""
     mock = MagicMock()
     # identify_speakers is async, so use AsyncMock for it
-    mock.identify_speakers = AsyncMock(return_value={
-        "SPEAKER_00": "Host",
-        "SPEAKER_01": "Guest",
-    })
+    mock.identify_speakers = AsyncMock(
+        return_value={
+            "SPEAKER_00": "Host",
+            "SPEAKER_01": "Guest",
+        }
+    )
     # apply_speaker_labels is sync, so use regular return_value
     mock.apply_speaker_labels.return_value = [
         {
@@ -173,12 +176,21 @@ class TestTranscriptionPipeline:
         await db_session.commit()
 
         # Create pipeline with mocks
-        with patch("app.workers.pipeline.YouTubeService", return_value=mock_youtube_service), \
-             patch("app.workers.pipeline.get_provider", return_value=mock_transcription_provider), \
-             patch("app.workers.pipeline.SpeakerLabelingService", return_value=mock_speaker_labeling), \
-             patch("app.workers.pipeline.EmbeddingService", return_value=mock_embedding_service), \
-             patch("app.workers.pipeline.VectorStoreService", return_value=mock_vector_store), \
-             patch("app.workers.pipeline.settings") as mock_settings:
+        with patch(
+            "app.workers.pipeline.YouTubeService", return_value=mock_youtube_service
+        ), patch(
+            "app.workers.pipeline.get_provider",
+            return_value=mock_transcription_provider,
+        ), patch(
+            "app.workers.pipeline.SpeakerLabelingService",
+            return_value=mock_speaker_labeling,
+        ), patch(
+            "app.workers.pipeline.EmbeddingService", return_value=mock_embedding_service
+        ), patch(
+            "app.workers.pipeline.VectorStoreService", return_value=mock_vector_store
+        ), patch(
+            "app.workers.pipeline.settings"
+        ) as mock_settings:
 
             # Configure mock settings
             mock_settings.TRANSCRIPTS_DIR = "/tmp/test_transcripts"
@@ -273,8 +285,11 @@ class TestTranscriptionPipeline:
             error_message="API rate limit exceeded",
         )
 
-        with patch("app.workers.pipeline.YouTubeService", return_value=mock_youtube_service), \
-             patch("app.workers.pipeline.get_provider", return_value=mock_failing_provider):
+        with patch(
+            "app.workers.pipeline.YouTubeService", return_value=mock_youtube_service
+        ), patch(
+            "app.workers.pipeline.get_provider", return_value=mock_failing_provider
+        ):
 
             pipeline = TranscriptionPipeline(
                 db=db_session,
@@ -309,7 +324,9 @@ class TestChunkingIntegration:
         """Chunking should create properly sized chunks."""
         from app.services.chunking import ChunkingService
 
-        service = ChunkingService(target_chunk_size=10, chunk_overlap=2, min_chunk_size=5)
+        service = ChunkingService(
+            target_chunk_size=10, chunk_overlap=2, min_chunk_size=5
+        )
 
         # Create test utterances (10 words each)
         utterances = [

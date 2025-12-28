@@ -12,6 +12,7 @@ from app.config import settings
 @dataclass
 class VideoInfo:
     """YouTube video metadata."""
+
     youtube_id: str
     title: str
     description: str | None
@@ -26,6 +27,7 @@ class VideoInfo:
 @dataclass
 class ChannelInfo:
     """YouTube channel metadata."""
+
     channel_id: str
     name: str
     description: str | None
@@ -73,7 +75,9 @@ class YouTubeService:
 
         return ChannelInfo(
             channel_id=info.get("channel_id") or info.get("id", ""),
-            name=info.get("channel") or info.get("uploader") or info.get("title", "Unknown"),
+            name=info.get("channel")
+            or info.get("uploader")
+            or info.get("title", "Unknown"),
             description=info.get("description"),
             thumbnail_url=self._get_best_thumbnail(info.get("thumbnails", [])),
             url=info.get("channel_url") or info.get("webpage_url") or channel_url,
@@ -146,17 +150,20 @@ class YouTubeService:
                 except ValueError:
                     pass
 
-            videos.append(VideoInfo(
-                youtube_id=entry.get("id", ""),
-                title=entry.get("title", "Untitled"),
-                description=entry.get("description"),
-                url=entry.get("url") or f"https://www.youtube.com/watch?v={entry.get('id')}",
-                thumbnail_url=self._get_best_thumbnail(entry.get("thumbnails", [])),
-                published_at=published_at,
-                duration_seconds=duration,
-                channel_id=info.get("channel_id"),
-                channel_name=info.get("channel") or info.get("uploader"),
-            ))
+            videos.append(
+                VideoInfo(
+                    youtube_id=entry.get("id", ""),
+                    title=entry.get("title", "Untitled"),
+                    description=entry.get("description"),
+                    url=entry.get("url")
+                    or f"https://www.youtube.com/watch?v={entry.get('id')}",
+                    thumbnail_url=self._get_best_thumbnail(entry.get("thumbnails", [])),
+                    published_at=published_at,
+                    duration_seconds=duration,
+                    channel_id=info.get("channel_id"),
+                    channel_name=info.get("channel") or info.get("uploader"),
+                )
+            )
 
         # Sort by published date (newest first)
         videos.sort(key=lambda v: v.published_at or datetime.min, reverse=True)
@@ -213,9 +220,7 @@ class YouTubeService:
         )
 
     async def download_audio(
-        self,
-        youtube_id: str,
-        output_path: Path | None = None
+        self, youtube_id: str, output_path: Path | None = None
     ) -> Path:
         """
         Download audio from YouTube video.
@@ -236,11 +241,13 @@ class YouTubeService:
 
         ydl_opts = {
             "format": "bestaudio[ext=m4a]/bestaudio/best",
-            "postprocessors": [{
-                "key": "FFmpegExtractAudio",
-                "preferredcodec": "mp3",
-                "preferredquality": "192",
-            }],
+            "postprocessors": [
+                {
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "mp3",
+                    "preferredquality": "192",
+                }
+            ],
             "outtmpl": str(output_path.with_suffix("")),
             "quiet": True,
             "no_warnings": True,
@@ -267,7 +274,9 @@ class YouTubeService:
             output_path = output_path.with_suffix(".mp3")
 
         if not output_path.exists():
-            raise FileNotFoundError(f"Audio file not found after download: {output_path}")
+            raise FileNotFoundError(
+                f"Audio file not found after download: {output_path}"
+            )
 
         logger.info(f"Downloaded audio to {output_path}")
         return output_path
@@ -298,7 +307,7 @@ class YouTubeService:
         sorted_thumbs = sorted(
             thumbnails,
             key=lambda t: (t.get("width", 0) or 0) * (t.get("height", 0) or 0),
-            reverse=True
+            reverse=True,
         )
 
         # Prefer medium quality for reasonable file size

@@ -10,6 +10,7 @@ Benefits over in-memory BM25:
 - Handles large datasets efficiently
 - Supports phrase search, stemming, ranking
 """
+
 from uuid import UUID
 from typing import Optional
 from dataclasses import dataclass
@@ -23,6 +24,7 @@ from app.models import Chunk, Episode, Channel
 @dataclass
 class KeywordSearchResult:
     """Result from PostgreSQL full-text search."""
+
     chunk_id: UUID
     episode_id: UUID
     channel_id: UUID
@@ -80,8 +82,8 @@ class PostgresSearchService:
         # Build the search query with ranking
         # Uses ts_rank_cd for better ranking of close matches
         rank_expr = func.ts_rank_cd(
-            func.to_tsvector('english', Chunk.text),
-            func.to_tsquery('english', ts_query),
+            func.to_tsvector("english", Chunk.text),
+            func.to_tsquery("english", ts_query),
         )
 
         stmt = (
@@ -93,11 +95,11 @@ class PostgresSearchService:
                 Chunk.speakers,
                 Chunk.start_ms,
                 Chunk.end_ms,
-                rank_expr.label('rank'),
+                rank_expr.label("rank"),
             )
             .where(
-                func.to_tsvector('english', Chunk.text).op('@@')(
-                    func.to_tsquery('english', ts_query)
+                func.to_tsvector("english", Chunk.text).op("@@")(
+                    func.to_tsquery("english", ts_query)
                 )
             )
             .where(rank_expr >= min_rank)
@@ -127,7 +129,9 @@ class PostgresSearchService:
         episode_ids = [row.episode_id for row in rows]
         if episode_ids:
             ep_result = await self.db.execute(
-                select(Episode.id, Episode.channel_id).where(Episode.id.in_(episode_ids))
+                select(Episode.id, Episode.channel_id).where(
+                    Episode.id.in_(episode_ids)
+                )
             )
             episode_channels = {row.id: row.channel_id for row in ep_result.all()}
         else:
@@ -166,27 +170,27 @@ class PostgresSearchService:
 
         # ts_headline highlights matching terms
         headline_expr = func.ts_headline(
-            'english',
+            "english",
             Chunk.text,
-            func.to_tsquery('english', ts_query),
-            'StartSel=<mark>, StopSel=</mark>, MaxWords=50, MinWords=20',
+            func.to_tsquery("english", ts_query),
+            "StartSel=<mark>, StopSel=</mark>, MaxWords=50, MinWords=20",
         )
 
         rank_expr = func.ts_rank_cd(
-            func.to_tsvector('english', Chunk.text),
-            func.to_tsquery('english', ts_query),
+            func.to_tsvector("english", Chunk.text),
+            func.to_tsquery("english", ts_query),
         )
 
         stmt = (
             select(
                 Chunk.id,
                 Chunk.episode_id,
-                headline_expr.label('headline'),
-                rank_expr.label('rank'),
+                headline_expr.label("headline"),
+                rank_expr.label("rank"),
             )
             .where(
-                func.to_tsvector('english', Chunk.text).op('@@')(
-                    func.to_tsquery('english', ts_query)
+                func.to_tsvector("english", Chunk.text).op("@@")(
+                    func.to_tsquery("english", ts_query)
                 )
             )
             .order_by(rank_expr.desc())
@@ -226,7 +230,7 @@ class PostgresSearchService:
 
         # Extract quoted phrases first
         phrases = re.findall(r'"([^"]+)"', query)
-        remaining = re.sub(r'"[^"]+"', '', query)
+        remaining = re.sub(r'"[^"]+"', "", query)
 
         parts = []
 
@@ -235,13 +239,13 @@ class PostgresSearchService:
             words = []
             for w in phrase.strip().split():
                 # Only allow alphanumeric characters
-                clean = re.sub(r'[^\w]', '', w)
+                clean = re.sub(r"[^\w]", "", w)
                 if clean and len(clean) <= 50:
                     # Escape single quotes
                     words.append(clean.lower().replace("'", "''"))
 
             if words:
-                phrase_query = ' <-> '.join(f"'{w}'" for w in words)
+                phrase_query = " <-> ".join(f"'{w}'" for w in words)
                 parts.append(f"({phrase_query})")
 
         # Add remaining words
@@ -249,21 +253,21 @@ class PostgresSearchService:
         for word in remaining_words:
             word = word.strip()
 
-            if word.upper() == 'OR':
+            if word.upper() == "OR":
                 if parts:
-                    parts[-1] = parts[-1] + ' |'
+                    parts[-1] = parts[-1] + " |"
                 continue
-            elif word.upper() == 'AND':
+            elif word.upper() == "AND":
                 continue  # AND is default
 
             # Sanitize: only alphanumeric
-            clean_word = re.sub(r'[^\w]', '', word)
+            clean_word = re.sub(r"[^\w]", "", word)
 
             if clean_word and len(clean_word) <= 50:
                 # Escape single quotes
                 safe_word = clean_word.lower().replace("'", "''")
 
-                if parts and parts[-1].endswith('|'):
+                if parts and parts[-1].endswith("|"):
                     parts[-1] = parts[-1] + f" '{safe_word}'"
                 else:
                     parts.append(f"'{safe_word}'")
@@ -271,5 +275,5 @@ class PostgresSearchService:
         if not parts:
             return "''"
 
-        result = ' & '.join(p for p in parts if not p.endswith('|'))
+        result = " & ".join(p for p in parts if not p.endswith("|"))
         return result

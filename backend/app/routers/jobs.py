@@ -58,21 +58,16 @@ async def list_jobs(
 @router.get("/{job_id}", response_model=JobDetailResponse)
 async def get_job(job_id: UUID, db: DB):
     """Get job details."""
-    result = await db.execute(
-        select(Job).where(Job.id == job_id)
-    )
+    result = await db.execute(select(Job).where(Job.id == job_id))
     job = result.scalar_one_or_none()
 
     if not job:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Job not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
         )
 
     # Get episode info
-    ep_result = await db.execute(
-        select(Episode).where(Episode.id == job.episode_id)
-    )
+    ep_result = await db.execute(select(Episode).where(Episode.id == job.episode_id))
     episode = ep_result.scalar_one_or_none()
 
     # Get batch info
@@ -114,21 +109,17 @@ async def retry_job(
     _: AdminAuth,
 ):
     """Retry a failed job."""
-    result = await db.execute(
-        select(Job).where(Job.id == job_id)
-    )
+    result = await db.execute(select(Job).where(Job.id == job_id))
     job = result.scalar_one_or_none()
 
     if not job:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Job not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
         )
 
     if job.status != "failed":
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Can only retry failed jobs"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Can only retry failed jobs"
         )
 
     # Reset job
@@ -142,9 +133,7 @@ async def retry_job(
     job.retry_count += 1
 
     # Update episode status
-    ep_result = await db.execute(
-        select(Episode).where(Episode.id == job.episode_id)
-    )
+    ep_result = await db.execute(select(Episode).where(Episode.id == job.episode_id))
     episode = ep_result.scalar_one_or_none()
     if episode:
         episode.status = "queued"
@@ -182,21 +171,24 @@ async def pause_job(
     _: AdminAuth,
 ):
     """Pause a running job."""
-    result = await db.execute(
-        select(Job).where(Job.id == job_id)
-    )
+    result = await db.execute(select(Job).where(Job.id == job_id))
     job = result.scalar_one_or_none()
 
     if not job:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Job not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
         )
 
-    if job.status not in ("processing", "transcribing", "downloading", "embedding", "chunking"):
+    if job.status not in (
+        "processing",
+        "transcribing",
+        "downloading",
+        "embedding",
+        "chunking",
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot pause job with status: {job.status}"
+            detail=f"Cannot pause job with status: {job.status}",
         )
 
     job.status = "paused"
@@ -213,29 +205,24 @@ async def resume_job(
     _: AdminAuth,
 ):
     """Resume a paused job."""
-    result = await db.execute(
-        select(Job).where(Job.id == job_id)
-    )
+    result = await db.execute(select(Job).where(Job.id == job_id))
     job = result.scalar_one_or_none()
 
     if not job:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Job not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
         )
 
     if job.status != "paused":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot resume job with status: {job.status}"
+            detail=f"Cannot resume job with status: {job.status}",
         )
 
     job.status = "pending"
-    
+
     # Update episode status
-    ep_result = await db.execute(
-        select(Episode).where(Episode.id == job.episode_id)
-    )
+    ep_result = await db.execute(select(Episode).where(Episode.id == job.episode_id))
     episode = ep_result.scalar_one_or_none()
     if episode:
         episode.status = "queued"
@@ -252,29 +239,24 @@ async def cancel_job(
     _: AdminAuth,
 ):
     """Cancel a pending or running job."""
-    result = await db.execute(
-        select(Job).where(Job.id == job_id)
-    )
+    result = await db.execute(select(Job).where(Job.id == job_id))
     job = result.scalar_one_or_none()
 
     if not job:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Job not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
         )
 
     if job.status in ("done", "cancelled"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot cancel job with status: {job.status}"
+            detail=f"Cannot cancel job with status: {job.status}",
         )
 
     job.status = "cancelled"
 
     # Update episode status
-    ep_result = await db.execute(
-        select(Episode).where(Episode.id == job.episode_id)
-    )
+    ep_result = await db.execute(select(Episode).where(Episode.id == job.episode_id))
     episode = ep_result.scalar_one_or_none()
     if episode:
         episode.status = "skipped"

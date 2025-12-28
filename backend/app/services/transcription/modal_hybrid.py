@@ -12,6 +12,7 @@ This is the recommended approach for bulk channel transcription:
 
 Performance: ~8-15 minutes for 100 videos vs 25+ hours on local GPU
 """
+
 import asyncio
 import uuid
 from pathlib import Path
@@ -29,7 +30,10 @@ from app.services.transcription.base import (
 from app.services.transcription.modal_cloud import MODAL_AVAILABLE
 
 if MODAL_AVAILABLE:
-    from app.services.transcription.modal_cloud import ModalWhisperTranscriber, modal_app
+    from app.services.transcription.modal_cloud import (
+        ModalWhisperTranscriber,
+        modal_app,
+    )
 
 
 class ModalHybridProvider(TranscriptionProvider):
@@ -94,6 +98,7 @@ class ModalHybridProvider(TranscriptionProvider):
             raise RuntimeError("Modal not installed. Run: pip install modal")
 
         import os
+
         if not os.environ.get("MODAL_TOKEN_ID"):
             raise RuntimeError("MODAL_TOKEN_ID not set. Run: modal token new")
 
@@ -105,10 +110,7 @@ class ModalHybridProvider(TranscriptionProvider):
         return self._transcriber
 
     async def submit_job(
-        self,
-        audio_path: Path,
-        speakers_expected: int = 2,
-        language: str = "en"
+        self, audio_path: Path, speakers_expected: int = 2, language: str = "en"
     ) -> str:
         """Submit audio for Modal cloud transcription."""
         return str(uuid.uuid4())
@@ -116,15 +118,11 @@ class ModalHybridProvider(TranscriptionProvider):
     async def get_status(self, provider_job_id: str) -> TranscriptResult:
         """Modal processes synchronously."""
         return TranscriptResult(
-            provider_job_id=provider_job_id,
-            status=TranscriptionStatus.COMPLETED
+            provider_job_id=provider_job_id, status=TranscriptionStatus.COMPLETED
         )
 
     async def transcribe(
-        self,
-        audio_path: Path,
-        speakers_expected: int = 2,
-        language: str = "en"
+        self, audio_path: Path, speakers_expected: int = 2, language: str = "en"
     ) -> TranscriptResult:
         """
         Transcribe a single audio file.
@@ -153,7 +151,7 @@ class ModalHybridProvider(TranscriptionProvider):
                     audio_bytes=audio_bytes,
                     language=language,
                     job_id=job_id,
-                )
+                ),
             )
 
             return self._process_result(result, job_id)
@@ -163,7 +161,7 @@ class ModalHybridProvider(TranscriptionProvider):
             return TranscriptResult(
                 provider_job_id=job_id,
                 status=TranscriptionStatus.FAILED,
-                error_message=str(e)
+                error_message=str(e),
             )
 
     async def transcribe_batch(
@@ -211,11 +209,13 @@ class ModalHybridProvider(TranscriptionProvider):
             audio_data = list(executor.map(read_audio, audio_paths))
 
         for i, (path, audio_bytes) in enumerate(audio_data):
-            batch_data.append({
-                "path": path,
-                "audio_bytes": audio_bytes,
-                "job_id": str(uuid.uuid4()),
-            })
+            batch_data.append(
+                {
+                    "path": path,
+                    "audio_bytes": audio_bytes,
+                    "job_id": str(uuid.uuid4()),
+                }
+            )
 
         if on_progress:
             on_progress(0, total, f"Uploading {total} files to Modal...")
@@ -244,32 +244,47 @@ class ModalHybridProvider(TranscriptionProvider):
                     results.append((data, result))
                     completed += 1
                     if on_progress:
-                        on_progress(completed, total, f"Transcribed {completed}/{total}")
+                        on_progress(
+                            completed, total, f"Transcribed {completed}/{total}"
+                        )
                 except Exception as e:
                     results.append((data, {"status": "failed", "error": str(e)}))
                     completed += 1
                     if on_progress:
-                        on_progress(completed, total, f"Transcribed {completed}/{total} (1 failed)")
+                        on_progress(
+                            completed,
+                            total,
+                            f"Transcribed {completed}/{total} (1 failed)",
+                        )
 
             return results
 
         results = await loop.run_in_executor(None, run_batch)
 
         # Convert to TranscriptResults maintaining order
-        path_to_result = {str(data["path"]): self._process_result(result, data["job_id"])
-                         for data, result in results}
+        path_to_result = {
+            str(data["path"]): self._process_result(result, data["job_id"])
+            for data, result in results
+        }
 
         transcript_results = [
-            path_to_result.get(str(path), TranscriptResult(
-                provider_job_id="unknown",
-                status=TranscriptionStatus.FAILED,
-                error_message="Result not found"
-            ))
+            path_to_result.get(
+                str(path),
+                TranscriptResult(
+                    provider_job_id="unknown",
+                    status=TranscriptionStatus.FAILED,
+                    error_message="Result not found",
+                ),
+            )
             for path in audio_paths
         ]
 
-        completed_count = sum(1 for r in transcript_results if r.status == TranscriptionStatus.COMPLETED)
-        failed_count = sum(1 for r in transcript_results if r.status == TranscriptionStatus.FAILED)
+        completed_count = sum(
+            1 for r in transcript_results if r.status == TranscriptionStatus.COMPLETED
+        )
+        failed_count = sum(
+            1 for r in transcript_results if r.status == TranscriptionStatus.FAILED
+        )
 
         logger.info(
             f"Modal hybrid batch complete: {completed_count} success, {failed_count} failed"
@@ -283,7 +298,7 @@ class ModalHybridProvider(TranscriptionProvider):
             return TranscriptResult(
                 provider_job_id=job_id,
                 status=TranscriptionStatus.FAILED,
-                error_message=result.get("error", "Unknown error")
+                error_message=result.get("error", "Unknown error"),
             )
 
         utterances = [
@@ -312,5 +327,5 @@ class ModalHybridProvider(TranscriptionProvider):
                 "language_probability": result.get("language_probability"),
                 "gpu_type": self._gpu_type,
                 "mode": "hybrid",
-            }
+            },
         )

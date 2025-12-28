@@ -10,7 +10,9 @@ class Utterance(Base):
     __tablename__ = "utterances"
 
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
-    episode_id = Column(GUID(), ForeignKey("episodes.id", ondelete="CASCADE"), nullable=False)
+    episode_id = Column(
+        GUID(), ForeignKey("episodes.id", ondelete="CASCADE"), nullable=False
+    )
 
     # Speaker info
     speaker = Column(String(200), nullable=False, index=True)  # "Sam Parr", "Guest"

@@ -23,7 +23,9 @@ class Settings(BaseSettings):
 
             # Check admin secret is strong enough (min 32 chars)
             if len(self.ADMIN_SECRET) < 32:
-                errors.append("ADMIN_SECRET must be at least 32 characters in production")
+                errors.append(
+                    "ADMIN_SECRET must be at least 32 characters in production"
+                )
 
             # Check CORS is configured (not wildcarded)
             if "*" in self.cors_origins_list:
@@ -66,7 +68,9 @@ class Settings(BaseSettings):
     # Transcription - Faster-Whisper (4x faster, recommended for local)
     FASTER_WHISPER_MODEL: str = "large-v3"
     FASTER_WHISPER_DEVICE: str = "auto"  # "auto", "cuda", or "cpu"
-    FASTER_WHISPER_COMPUTE_TYPE: str = "auto"  # "auto", "float16", "int8", "int8_float16"
+    FASTER_WHISPER_COMPUTE_TYPE: str = (
+        "auto"  # "auto", "float16", "int8", "int8_float16"
+    )
     FASTER_WHISPER_MAX_CONCURRENT: int = 2
 
     # Transcription - Modal Cloud (serverless GPU)
@@ -111,7 +115,9 @@ class Settings(BaseSettings):
         """Parse CORS origins from comma-separated string."""
         if self.ENVIRONMENT == "development":
             return ["*"]  # Allow all in development
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+        return [
+            origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()
+        ]
 
     # Chunking
     CHUNK_SIZE: int = 500  # words

@@ -131,14 +131,18 @@ async def health_detailed():
         "checked_in": pool.checkedin(),
         "checked_out": pool.checkedout(),
         "overflow": pool.overflow(),
-        "invalid": pool.invalidatedcount() if hasattr(pool, 'invalidatedcount') else 0,
+        "invalid": pool.invalidatedcount() if hasattr(pool, "invalidatedcount") else 0,
     }
 
     # Check if pool is near exhaustion
-    available = pool.size() - pool.checkedout() + (10 - pool.overflow())  # max_overflow=10
+    available = (
+        pool.size() - pool.checkedout() + (10 - pool.overflow())
+    )  # max_overflow=10
     if available < 3:
         health_status["components"]["database"]["status"] = "degraded"
-        health_status["components"]["database"]["warning"] = "Connection pool nearly exhausted"
+        health_status["components"]["database"][
+            "warning"
+        ] = "Connection pool nearly exhausted"
 
     # Redis status
     try:

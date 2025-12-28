@@ -1,4 +1,5 @@
 """Transcription tasks for Celery."""
+
 from uuid import UUID
 from celery import group, chain
 from celery.utils.log import get_task_logger
@@ -23,7 +24,9 @@ logger = get_task_logger(__name__)
     retry_backoff=True,
     retry_jitter=True,
 )
-def process_episode_task(self, episode_id: str, job_id: str, provider: str, config: dict):
+def process_episode_task(
+    self, episode_id: str, job_id: str, provider: str, config: dict
+):
     """
     Process a single episode through the transcription pipeline.
 
@@ -40,9 +43,7 @@ def process_episode_task(self, episode_id: str, job_id: str, provider: str, conf
         async with async_session_factory() as db:
             try:
                 # Get job and episode
-                job_result = await db.execute(
-                    select(Job).where(Job.id == UUID(job_id))
-                )
+                job_result = await db.execute(select(Job).where(Job.id == UUID(job_id)))
                 job = job_result.scalar_one_or_none()
 
                 if not job:
@@ -71,8 +72,12 @@ def process_episode_task(self, episode_id: str, job_id: str, provider: str, conf
                 pipeline = TranscriptionPipeline(
                     db=db,
                     provider=provider,
-                    speakers=config.get("speakers", channel.speakers if channel else []),
-                    unknown_speaker_label=channel.default_unknown_speaker_label if channel else "Guest",
+                    speakers=config.get(
+                        "speakers", channel.speakers if channel else []
+                    ),
+                    unknown_speaker_label=(
+                        channel.default_unknown_speaker_label if channel else "Guest"
+                    ),
                 )
 
                 # Process the episode
@@ -137,7 +142,7 @@ def process_batch_task(self, batch_id: str):
             jobs_result = await db.execute(
                 select(Job).where(
                     Job.batch_id == UUID(batch_id),
-                    Job.status.in_(["pending", "failed"])
+                    Job.status.in_(["pending", "failed"]),
                 )
             )
             jobs = jobs_result.scalars().all()
@@ -184,22 +189,26 @@ def process_batch_task(self, batch_id: str):
                 jobs_result = await db.execute(
                     select(Job).where(
                         Job.batch_id == UUID(batch_id),
-                        Job.status.in_(["pending", "failed"])
+                        Job.status.in_(["pending", "failed"]),
                     )
                 )
                 jobs = jobs_result.scalars().all()
 
                 config = batch.config or {}
 
-                return [(str(j.episode_id), str(j.id), batch.provider, config) for j in jobs]
+                return [
+                    (str(j.episode_id), str(j.id), batch.provider, config) for j in jobs
+                ]
 
         job_args = run_async(get_jobs())
 
         # Execute jobs in parallel (respecting concurrency via worker config)
-        task_group = group([
-            process_episode_task.s(ep_id, job_id, provider, config)
-            for ep_id, job_id, provider, config in job_args
-        ])
+        task_group = group(
+            [
+                process_episode_task.s(ep_id, job_id, provider, config)
+                for ep_id, job_id, provider, config in job_args
+            ]
+        )
 
         # Apply the group and link to batch completion
         group_result = task_group.apply_async()
@@ -250,14 +259,19 @@ def check_batch_completion(self, batch_id: str):
             # Update batch stats
             batch.completed_episodes = completed
             batch.failed_episodes = failed
-            batch.progress_percent = (completed + failed) / total * 100 if total > 0 else 0
+            batch.progress_percent = (
+                (completed + failed) / total * 100 if total > 0 else 0
+            )
 
             # Check if all done
             if pending == 0 and processing == 0:
                 batch.status = "completed"
                 from datetime import datetime
+
                 batch.completed_at = datetime.utcnow()
-                logger.info(f"Batch {batch_id} completed: {completed} success, {failed} failed")
+                logger.info(
+                    f"Batch {batch_id} completed: {completed} success, {failed} failed"
+                )
             else:
                 # Re-check in 30 seconds
                 check_batch_completion.apply_async(
@@ -291,8 +305,7 @@ def retry_failed_jobs(self, batch_id: str):
             # Get failed jobs
             jobs_result = await db.execute(
                 select(Job).where(
-                    Job.batch_id == UUID(batch_id),
-                    Job.status == "failed"
+                    Job.batch_id == UUID(batch_id), Job.status == "failed"
                 )
             )
             jobs = jobs_result.scalars().all()

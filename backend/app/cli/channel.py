@@ -1,6 +1,7 @@
 """
 Channel management CLI commands.
 """
+
 import asyncio
 from typing import Optional
 import typer
@@ -54,9 +55,15 @@ def list_channels():
 @app.command("scrape")
 def scrape_channel(
     url: str = typer.Argument(..., help="YouTube channel URL"),
-    limit: Optional[int] = typer.Option(None, "--limit", "-l", help="Maximum episodes to fetch"),
-    min_duration: int = typer.Option(300, "--min-duration", "-m", help="Minimum video duration in seconds"),
-    create: bool = typer.Option(False, "--create", "-c", help="Create channel in database"),
+    limit: Optional[int] = typer.Option(
+        None, "--limit", "-l", help="Maximum episodes to fetch"
+    ),
+    min_duration: int = typer.Option(
+        300, "--min-duration", "-m", help="Minimum video duration in seconds"
+    ),
+    create: bool = typer.Option(
+        False, "--create", "-c", help="Create channel in database"
+    ),
 ):
     """Scrape a YouTube channel and list its videos."""
     from app.services.youtube import YouTubeService
@@ -147,7 +154,9 @@ def scrape_channel(
                 db.add(episode)
 
             await db.commit()
-            console.print(f"\n[green]Created channel '{channel.name}' with {len(videos)} episodes[/green]")
+            console.print(
+                f"\n[green]Created channel '{channel.name}' with {len(videos)} episodes[/green]"
+            )
 
     asyncio.run(_scrape())
 
@@ -187,7 +196,11 @@ def channel_status(
 
         total = 0
         for status, count in sorted(status_counts.items()):
-            color = "green" if status == "done" else "yellow" if status == "pending" else "red"
+            color = (
+                "green"
+                if status == "done"
+                else "yellow" if status == "pending" else "red"
+            )
             table.add_row(f"[{color}]{status}[/{color}]", str(count))
             total += count
 
@@ -203,7 +216,9 @@ def channel_status(
 @app.command("reset")
 def reset_channel(
     identifier: str = typer.Argument(..., help="Channel name, slug, or ID"),
-    episodes_only: bool = typer.Option(False, "--episodes-only", help="Only reset episodes, keep channel"),
+    episodes_only: bool = typer.Option(
+        False, "--episodes-only", help="Only reset episodes, keep channel"
+    ),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
 ):
     """Reset a channel (delete all data and re-import)."""
@@ -232,34 +247,31 @@ def reset_channel(
 
             if episode_ids:
                 # Delete chunks
-                await db.execute(
-                    delete(Chunk).where(Chunk.episode_id.in_(episode_ids))
-                )
+                await db.execute(delete(Chunk).where(Chunk.episode_id.in_(episode_ids)))
                 # Delete utterances
                 await db.execute(
                     delete(Utterance).where(Utterance.episode_id.in_(episode_ids))
                 )
                 # Delete jobs
-                await db.execute(
-                    delete(Job).where(Job.episode_id.in_(episode_ids))
-                )
+                await db.execute(delete(Job).where(Job.episode_id.in_(episode_ids)))
 
             # Reset episodes
-            await db.execute(
-                delete(Episode).where(Episode.channel_id == channel.id)
-            )
+            await db.execute(delete(Episode).where(Episode.channel_id == channel.id))
 
             if not episodes_only:
                 from app.models import Channel
-                await db.execute(
-                    delete(Channel).where(Channel.id == channel.id)
-                )
+
+                await db.execute(delete(Channel).where(Channel.id == channel.id))
 
             await db.commit()
 
         if episodes_only:
-            console.print(f"[green]Reset {len(episode_ids)} episodes for '{channel.name}'[/green]")
+            console.print(
+                f"[green]Reset {len(episode_ids)} episodes for '{channel.name}'[/green]"
+            )
         else:
-            console.print(f"[green]Deleted channel '{channel.name}' and {len(episode_ids)} episodes[/green]")
+            console.print(
+                f"[green]Deleted channel '{channel.name}' and {len(episode_ids)} episodes[/green]"
+            )
 
     asyncio.run(_reset())

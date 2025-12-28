@@ -1,4 +1,5 @@
 """Maintenance tasks for Celery."""
+
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -73,32 +74,34 @@ def update_channel_stats(self):
             for channel in channels:
                 # Count episodes
                 episode_count_result = await db.execute(
-                    select(func.count(Episode.id))
-                    .where(Episode.channel_id == channel.id)
+                    select(func.count(Episode.id)).where(
+                        Episode.channel_id == channel.id
+                    )
                 )
                 episode_count = episode_count_result.scalar()
 
                 # Count transcribed episodes
                 transcribed_count_result = await db.execute(
-                    select(func.count(Episode.id))
-                    .where(
-                        Episode.channel_id == channel.id,
-                        Episode.status == "done"
+                    select(func.count(Episode.id)).where(
+                        Episode.channel_id == channel.id, Episode.status == "done"
                     )
                 )
                 transcribed_count = transcribed_count_result.scalar()
 
                 # Sum duration
                 duration_result = await db.execute(
-                    select(func.coalesce(func.sum(Episode.duration_seconds), 0))
-                    .where(Episode.channel_id == channel.id)
+                    select(func.coalesce(func.sum(Episode.duration_seconds), 0)).where(
+                        Episode.channel_id == channel.id
+                    )
                 )
                 total_duration = duration_result.scalar()
 
                 # Update if changed
-                if (channel.episode_count != episode_count or
-                    channel.transcribed_count != transcribed_count or
-                    channel.total_duration_seconds != total_duration):
+                if (
+                    channel.episode_count != episode_count
+                    or channel.transcribed_count != transcribed_count
+                    or channel.total_duration_seconds != total_duration
+                ):
 
                     channel.episode_count = episode_count
                     channel.transcribed_count = transcribed_count
@@ -139,6 +142,7 @@ def refresh_popular_embeddings(self):
     ]
 
     from app.tasks.embedding import warm_embedding_cache
+
     warm_embedding_cache.delay(common_queries)
 
     return {"queries": len(common_queries)}
@@ -196,6 +200,7 @@ def reindex_episode(self, episode_id: str):
         async with async_session_factory() as db:
             # Get episode with utterances
             from sqlalchemy.orm import selectinload
+
             episode_result = await db.execute(
                 select(Episode)
                 .options(selectinload(Episode.utterances))
@@ -238,21 +243,23 @@ def reindex_episode(self, episode_id: str):
             # Prepare chunk data
             chunk_data = []
             for i, chunk in enumerate(chunks):
-                chunk_data.append({
-                    "text": chunk["text"],
-                    "episode_id": episode.id,
-                    "channel_id": episode.channel_id,
-                    "episode_title": episode.title,
-                    "channel_name": channel.name if channel else "",
-                    "channel_slug": channel.slug if channel else "",
-                    "primary_speaker": chunk.get("primary_speaker"),
-                    "speakers": chunk.get("speakers", []),
-                    "start_ms": chunk["start_ms"],
-                    "end_ms": chunk["end_ms"],
-                    "chunk_index": i,
-                    "word_count": chunk.get("word_count", 0),
-                    "published_at": episode.published_at,
-                })
+                chunk_data.append(
+                    {
+                        "text": chunk["text"],
+                        "episode_id": episode.id,
+                        "channel_id": episode.channel_id,
+                        "episode_title": episode.title,
+                        "channel_name": channel.name if channel else "",
+                        "channel_slug": channel.slug if channel else "",
+                        "primary_speaker": chunk.get("primary_speaker"),
+                        "speakers": chunk.get("speakers", []),
+                        "start_ms": chunk["start_ms"],
+                        "end_ms": chunk["end_ms"],
+                        "chunk_index": i,
+                        "word_count": chunk.get("word_count", 0),
+                        "published_at": episode.published_at,
+                    }
+                )
 
             # Generate embeddings
             embedding_service = EmbeddingService()

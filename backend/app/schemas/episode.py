@@ -33,6 +33,7 @@ class EpisodeCreate(EpisodeBase):
 
 class EpisodeBulkCreate(BaseModel):
     """Create multiple episodes at once."""
+
     channel_id: UUID
     episodes: list[EpisodeBase]
 

@@ -1,6 +1,16 @@
 from fastapi import APIRouter
 
-from app.routers import channels, episodes, batches, jobs, search, chat, providers, websocket, settings
+from app.routers import (
+    channels,
+    episodes,
+    batches,
+    jobs,
+    search,
+    chat,
+    providers,
+    websocket,
+    settings,
+)
 
 api_router = APIRouter()
 

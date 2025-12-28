@@ -4,6 +4,7 @@ WebSocket Manager for real-time updates.
 Manages WebSocket connections and broadcasts job/batch updates
 via Redis PubSub for cross-process communication.
 """
+
 import asyncio
 import json
 from typing import Dict, Set, Any
@@ -19,6 +20,7 @@ from app.config import settings
 @dataclass
 class JobUpdate:
     """Job progress update message."""
+
     type: str = "job_update"
     job_id: str = ""
     batch_id: str = ""
@@ -36,6 +38,7 @@ class JobUpdate:
 @dataclass
 class BatchUpdate:
     """Batch progress update message."""
+
     type: str = "batch_update"
     batch_id: str = ""
     status: str = ""
@@ -130,7 +133,9 @@ class ConnectionManager:
             for channel in channels:
                 await self.subscribe(websocket, channel)
 
-        logger.info(f"WebSocket connected, total connections: {len(self.active_connections)}")
+        logger.info(
+            f"WebSocket connected, total connections: {len(self.active_connections)}"
+        )
 
     def disconnect(self, websocket: WebSocket):
         """Remove a WebSocket connection."""
@@ -140,7 +145,9 @@ class ConnectionManager:
                 self._unsubscribe_internal(websocket, channel)
             del self.active_connections[websocket]
 
-        logger.info(f"WebSocket disconnected, remaining: {len(self.active_connections)}")
+        logger.info(
+            f"WebSocket disconnected, remaining: {len(self.active_connections)}"
+        )
 
     async def subscribe(self, websocket: WebSocket, channel: str):
         """Subscribe a connection to a channel."""
@@ -269,7 +276,9 @@ async def publish_batch_update(
     """Publish a batch update to Redis for broadcasting."""
     progress_percent = 0.0
     if total_episodes > 0:
-        progress_percent = ((completed_episodes + failed_episodes) / total_episodes) * 100
+        progress_percent = (
+            (completed_episodes + failed_episodes) / total_episodes
+        ) * 100
 
     update = BatchUpdate(
         batch_id=batch_id,

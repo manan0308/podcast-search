@@ -13,11 +13,12 @@ class GUID(TypeDecorator):
     (like SQLite in tests). This enables running the same models against
     PostgreSQL in production and SQLite for fast local unit tests.
     """
+
     impl = CHAR
     cache_ok = True
 
     def load_dialect_impl(self, dialect):
-        if dialect.name == 'postgresql':
+        if dialect.name == "postgresql":
             return dialect.type_descriptor(PG_UUID(as_uuid=True))
         else:
             return dialect.type_descriptor(CHAR(32))
@@ -25,7 +26,7 @@ class GUID(TypeDecorator):
     def process_bind_param(self, value, dialect):
         if value is None:
             return value
-        elif dialect.name == 'postgresql':
+        elif dialect.name == "postgresql":
             return value
         else:
             if isinstance(value, uuid_module.UUID):
@@ -36,12 +37,13 @@ class GUID(TypeDecorator):
     def process_result_value(self, value, dialect):
         if value is None:
             return value
-        elif dialect.name == 'postgresql':
+        elif dialect.name == "postgresql":
             return value
         else:
             if isinstance(value, uuid_module.UUID):
                 return value
             return uuid_module.UUID(value)
+
 
 # Convert postgresql:// to postgresql+asyncpg:// for async
 ASYNC_DATABASE_URL = settings.DATABASE_URL.replace(

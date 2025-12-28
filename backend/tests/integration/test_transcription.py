@@ -1,4 +1,5 @@
 """Integration tests for transcription pipeline."""
+
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 import asyncio
@@ -48,6 +49,7 @@ class TestTranscriptionPipeline:
 
         # Verify it imports from async_helpers, not defines its own run_async
         import inspect
+
         source = inspect.getsource(maintenance)
 
         assert "from app.tasks.async_helpers import run_async" in source
@@ -64,8 +66,7 @@ class TestProviderIntegration:
 
         providers = get_available_providers()
         free_available = [
-            p for p in providers
-            if p["available"] and p["cost_per_hour_cents"] == 0
+            p for p in providers if p["available"] and p["cost_per_hour_cents"] == 0
         ]
 
         assert len(free_available) > 0, "At least one free provider should be available"

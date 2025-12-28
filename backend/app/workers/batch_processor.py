@@ -39,9 +39,7 @@ async def process_batch(batch_id: str):
 
     async with BackgroundSessionLocal() as db:
         # Get batch
-        result = await db.execute(
-            select(Batch).where(Batch.id == UUID(batch_id))
-        )
+        result = await db.execute(select(Batch).where(Batch.id == UUID(batch_id)))
         batch = result.scalar_one_or_none()
 
         if not batch:
@@ -57,7 +55,9 @@ async def process_batch(batch_id: str):
         concurrency = batch.concurrency
         speakers = batch.config.get("speakers", [])
 
-        logger.info(f"Processing batch {batch_id} with {provider}, concurrency={concurrency}")
+        logger.info(
+            f"Processing batch {batch_id} with {provider}, concurrency={concurrency}"
+        )
 
         # Get pending jobs
         jobs_result = await db.execute(
@@ -78,9 +78,12 @@ async def process_batch(batch_id: str):
                 # Check if batch is still running with row lock to prevent race condition
                 async with BackgroundSessionLocal() as check_db:
                     from sqlalchemy import text
+
                     batch_check = await check_db.execute(
-                        text("SELECT status FROM batches WHERE id = :batch_id FOR UPDATE SKIP LOCKED"),
-                        {"batch_id": str(batch.id)}
+                        text(
+                            "SELECT status FROM batches WHERE id = :batch_id FOR UPDATE SKIP LOCKED"
+                        ),
+                        {"batch_id": str(batch.id)},
                     )
                     row = batch_check.fetchone()
                     current_status = row[0] if row else None
@@ -125,23 +128,28 @@ async def process_batch(batch_id: str):
             # Update batch stats atomically using SQL UPDATE (prevents race conditions)
             async with BackgroundSessionLocal() as stats_db:
                 from sqlalchemy import text
+
                 if success:
                     await stats_db.execute(
-                        text("""
+                        text(
+                            """
                             UPDATE batches
                             SET completed_episodes = completed_episodes + 1
                             WHERE id = :batch_id
-                        """),
-                        {"batch_id": batch_id}
+                        """
+                        ),
+                        {"batch_id": batch_id},
                     )
                 else:
                     await stats_db.execute(
-                        text("""
+                        text(
+                            """
                             UPDATE batches
                             SET failed_episodes = failed_episodes + 1
                             WHERE id = :batch_id
-                        """),
-                        {"batch_id": batch_id}
+                        """
+                        ),
+                        {"batch_id": batch_id},
                     )
                 await stats_db.commit()
 
@@ -205,9 +213,7 @@ async def retry_failed_jobs(batch_id: str):
                 episode.status = "queued"
 
         # Update batch status
-        batch_result = await db.execute(
-            select(Batch).where(Batch.id == UUID(batch_id))
-        )
+        batch_result = await db.execute(select(Batch).where(Batch.id == UUID(batch_id)))
         batch = batch_result.scalar_one_or_none()
         if batch:
             batch.status = "running"

@@ -1,6 +1,15 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Text, Integer, DateTime, ForeignKey, Index, UniqueConstraint
+from sqlalchemy import (
+    Column,
+    String,
+    Text,
+    Integer,
+    DateTime,
+    ForeignKey,
+    Index,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from app.database import Base, GUID
@@ -10,8 +19,12 @@ class Job(Base):
     __tablename__ = "jobs"
 
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
-    batch_id = Column(GUID(), ForeignKey("batches.id", ondelete="CASCADE"), nullable=True)
-    episode_id = Column(GUID(), ForeignKey("episodes.id", ondelete="CASCADE"), nullable=False)
+    batch_id = Column(
+        GUID(), ForeignKey("batches.id", ondelete="CASCADE"), nullable=True
+    )
+    episode_id = Column(
+        GUID(), ForeignKey("episodes.id", ondelete="CASCADE"), nullable=False
+    )
 
     # Provider info
     provider = Column(String(50), nullable=False)
@@ -43,7 +56,9 @@ class Job(Base):
     # Relationships
     batch = relationship("Batch", back_populates="jobs")
     episode = relationship("Episode", back_populates="jobs")
-    activity_logs = relationship("ActivityLog", back_populates="job", cascade="all, delete-orphan")
+    activity_logs = relationship(
+        "ActivityLog", back_populates="job", cascade="all, delete-orphan"
+    )
 
     # Indexes and constraints
     __table_args__ = (

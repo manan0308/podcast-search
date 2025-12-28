@@ -1,4 +1,5 @@
 """API Key management service."""
+
 import secrets
 import hashlib
 from datetime import datetime
@@ -109,9 +110,7 @@ class APIKeyService:
         Returns:
             True if revoked, False if not found
         """
-        result = await self.db.execute(
-            select(APIKey).where(APIKey.id == key_id)
-        )
+        result = await self.db.execute(select(APIKey).where(APIKey.id == key_id))
         api_key = result.scalar_one_or_none()
 
         if not api_key:
@@ -133,7 +132,5 @@ class APIKeyService:
 
     async def get_key(self, key_id: UUID) -> Optional[APIKey]:
         """Get API key by ID."""
-        result = await self.db.execute(
-            select(APIKey).where(APIKey.id == key_id)
-        )
+        result = await self.db.execute(select(APIKey).where(APIKey.id == key_id))
         return result.scalar_one_or_none()

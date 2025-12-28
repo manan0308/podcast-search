@@ -128,16 +128,18 @@ class VectorStoreService:
                 else:
                     payload["published_at"] = str(pub_at)
 
-            points.append(PointStruct(
-                id=point_id,
-                vector=embedding,
-                payload=payload,
-            ))
+            points.append(
+                PointStruct(
+                    id=point_id,
+                    vector=embedding,
+                    payload=payload,
+                )
+            )
 
         # Upsert in batches
         batch_size = 100
         for i in range(0, len(points), batch_size):
-            batch = points[i:i + batch_size]
+            batch = points[i : i + batch_size]
             self.client.upsert(
                 collection_name=self.collection_name,
                 points=batch,

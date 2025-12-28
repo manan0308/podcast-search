@@ -37,10 +37,7 @@ class AssemblyAIProvider(TranscriptionProvider):
         return 37  # $0.37/hour
 
     async def submit_job(
-        self,
-        audio_path: Path,
-        speakers_expected: int = 2,
-        language: str = "en"
+        self, audio_path: Path, speakers_expected: int = 2, language: str = "en"
     ) -> str:
         """Submit audio to AssemblyAI for transcription."""
         logger.info(f"Submitting {audio_path} to AssemblyAI")
@@ -54,8 +51,7 @@ class AssemblyAIProvider(TranscriptionProvider):
         # Run in thread pool since assemblyai SDK is sync
         loop = asyncio.get_event_loop()
         transcript = await loop.run_in_executor(
-            None,
-            lambda: self._transcriber.submit(str(audio_path), config=config)
+            None, lambda: self._transcriber.submit(str(audio_path), config=config)
         )
 
         logger.info(f"AssemblyAI job submitted: {transcript.id}")
@@ -65,8 +61,7 @@ class AssemblyAIProvider(TranscriptionProvider):
         """Check status of AssemblyAI transcription job."""
         loop = asyncio.get_event_loop()
         transcript = await loop.run_in_executor(
-            None,
-            lambda: aai.Transcript.get_by_id(provider_job_id)
+            None, lambda: aai.Transcript.get_by_id(provider_job_id)
         )
 
         # Map AssemblyAI status to our status
@@ -83,29 +78,30 @@ class AssemblyAIProvider(TranscriptionProvider):
             return TranscriptResult(
                 provider_job_id=provider_job_id,
                 status=status,
-                error_message=transcript.error or "Unknown error"
+                error_message=transcript.error or "Unknown error",
             )
 
         if status != TranscriptionStatus.COMPLETED:
-            return TranscriptResult(
-                provider_job_id=provider_job_id,
-                status=status
-            )
+            return TranscriptResult(provider_job_id=provider_job_id, status=status)
 
         # Parse completed transcript
         utterances = []
         if transcript.utterances:
             for utt in transcript.utterances:
-                utterances.append(Utterance(
-                    speaker=utt.speaker,
-                    text=utt.text,
-                    start_ms=utt.start,
-                    end_ms=utt.end,
-                    confidence=utt.confidence,
-                ))
+                utterances.append(
+                    Utterance(
+                        speaker=utt.speaker,
+                        text=utt.text,
+                        start_ms=utt.start,
+                        end_ms=utt.end,
+                        confidence=utt.confidence,
+                    )
+                )
 
         # Calculate cost
-        duration_ms = transcript.audio_duration * 1000 if transcript.audio_duration else 0
+        duration_ms = (
+            transcript.audio_duration * 1000 if transcript.audio_duration else 0
+        )
         cost_cents = self.estimate_cost(int(duration_ms / 1000))
 
         return TranscriptResult(
@@ -120,14 +116,11 @@ class AssemblyAIProvider(TranscriptionProvider):
                 "status": transcript.status,
                 "audio_duration": transcript.audio_duration,
                 "confidence": transcript.confidence,
-            }
+            },
         )
 
     async def transcribe(
-        self,
-        audio_path: Path,
-        speakers_expected: int = 2,
-        language: str = "en"
+        self, audio_path: Path, speakers_expected: int = 2, language: str = "en"
     ) -> TranscriptResult:
         """Transcribe audio file and wait for result."""
         logger.info(f"Starting AssemblyAI transcription for {audio_path}")
@@ -140,30 +133,33 @@ class AssemblyAIProvider(TranscriptionProvider):
 
         loop = asyncio.get_event_loop()
         transcript = await loop.run_in_executor(
-            None,
-            lambda: self._transcriber.transcribe(str(audio_path), config=config)
+            None, lambda: self._transcriber.transcribe(str(audio_path), config=config)
         )
 
         if transcript.status == "error":
             return TranscriptResult(
                 provider_job_id=transcript.id,
                 status=TranscriptionStatus.FAILED,
-                error_message=transcript.error or "Unknown error"
+                error_message=transcript.error or "Unknown error",
             )
 
         # Parse utterances
         utterances = []
         if transcript.utterances:
             for utt in transcript.utterances:
-                utterances.append(Utterance(
-                    speaker=utt.speaker,
-                    text=utt.text,
-                    start_ms=utt.start,
-                    end_ms=utt.end,
-                    confidence=utt.confidence,
-                ))
+                utterances.append(
+                    Utterance(
+                        speaker=utt.speaker,
+                        text=utt.text,
+                        start_ms=utt.start,
+                        end_ms=utt.end,
+                        confidence=utt.confidence,
+                    )
+                )
 
-        duration_ms = transcript.audio_duration * 1000 if transcript.audio_duration else 0
+        duration_ms = (
+            transcript.audio_duration * 1000 if transcript.audio_duration else 0
+        )
         cost_cents = self.estimate_cost(int(duration_ms / 1000))
 
         logger.info(f"AssemblyAI transcription complete: {len(utterances)} utterances")
@@ -180,5 +176,5 @@ class AssemblyAIProvider(TranscriptionProvider):
                 "status": transcript.status,
                 "audio_duration": transcript.audio_duration,
                 "confidence": transcript.confidence,
-            }
+            },
         )

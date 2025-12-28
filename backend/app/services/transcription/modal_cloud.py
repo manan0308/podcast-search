@@ -4,6 +4,7 @@ Modal cloud GPU transcription provider.
 Uses Modal.com for serverless GPU transcription at 70-200x realtime.
 Cost: ~$0.03-0.05 per hour of audio (A10G GPU pricing).
 """
+
 import asyncio
 import uuid
 import json
@@ -21,6 +22,7 @@ from app.services.transcription.base import (
 # Modal is optional - only load if available
 try:
     import modal
+
     MODAL_AVAILABLE = True
 except ImportError:
     MODAL_AVAILABLE = False
@@ -69,10 +71,7 @@ if MODAL_AVAILABLE:
 
         @modal.method()
         def transcribe(
-            self,
-            audio_bytes: bytes,
-            language: str = "en",
-            job_id: str = None
+            self, audio_bytes: bytes, language: str = "en", job_id: str = None
         ) -> dict:
             """Transcribe audio bytes on GPU."""
             import tempfile
@@ -101,13 +100,19 @@ if MODAL_AVAILABLE:
                 for segment in segments:
                     text = segment.text.strip()
                     if text:
-                        utterances.append({
-                            "speaker": "A",
-                            "text": text,
-                            "start_ms": int(segment.start * 1000),
-                            "end_ms": int(segment.end * 1000),
-                            "confidence": segment.avg_logprob if hasattr(segment, 'avg_logprob') else None,
-                        })
+                        utterances.append(
+                            {
+                                "speaker": "A",
+                                "text": text,
+                                "start_ms": int(segment.start * 1000),
+                                "end_ms": int(segment.end * 1000),
+                                "confidence": (
+                                    segment.avg_logprob
+                                    if hasattr(segment, "avg_logprob")
+                                    else None
+                                ),
+                            }
+                        )
                         full_text_parts.append(text)
 
                 return {
@@ -185,15 +190,12 @@ class ModalCloudProvider(TranscriptionProvider):
     def _check_modal_available(self):
         """Check if Modal is available and configured."""
         if not MODAL_AVAILABLE:
-            raise RuntimeError(
-                "Modal not installed. Run: pip install modal"
-            )
+            raise RuntimeError("Modal not installed. Run: pip install modal")
 
         import os
+
         if not os.environ.get("MODAL_TOKEN_ID"):
-            raise RuntimeError(
-                "MODAL_TOKEN_ID not set. Run: modal token new"
-            )
+            raise RuntimeError("MODAL_TOKEN_ID not set. Run: modal token new")
 
     def _get_transcriber(self):
         """Get or create Modal transcriber instance."""
@@ -203,10 +205,7 @@ class ModalCloudProvider(TranscriptionProvider):
         return self._transcriber
 
     async def submit_job(
-        self,
-        audio_path: Path,
-        speakers_expected: int = 2,
-        language: str = "en"
+        self, audio_path: Path, speakers_expected: int = 2, language: str = "en"
     ) -> str:
         """Submit audio for Modal cloud transcription."""
         job_id = str(uuid.uuid4())
@@ -215,15 +214,11 @@ class ModalCloudProvider(TranscriptionProvider):
     async def get_status(self, provider_job_id: str) -> TranscriptResult:
         """Modal processes synchronously, status always completed."""
         return TranscriptResult(
-            provider_job_id=provider_job_id,
-            status=TranscriptionStatus.COMPLETED
+            provider_job_id=provider_job_id, status=TranscriptionStatus.COMPLETED
         )
 
     async def transcribe(
-        self,
-        audio_path: Path,
-        speakers_expected: int = 2,
-        language: str = "en"
+        self, audio_path: Path, speakers_expected: int = 2, language: str = "en"
     ) -> TranscriptResult:
         """Transcribe audio using Modal cloud GPU."""
         job_id = str(uuid.uuid4())
@@ -247,14 +242,14 @@ class ModalCloudProvider(TranscriptionProvider):
                     audio_bytes=audio_bytes,
                     language=language,
                     job_id=job_id,
-                )
+                ),
             )
 
             if result.get("status") == "failed":
                 return TranscriptResult(
                     provider_job_id=job_id,
                     status=TranscriptionStatus.FAILED,
-                    error_message=result.get("error", "Unknown error")
+                    error_message=result.get("error", "Unknown error"),
                 )
 
             # Convert utterance dicts to Utterance objects
@@ -291,7 +286,7 @@ class ModalCloudProvider(TranscriptionProvider):
                     "language": result.get("language"),
                     "language_probability": result.get("language_probability"),
                     "gpu_type": self._gpu_type,
-                }
+                },
             )
 
         except Exception as e:
@@ -299,13 +294,11 @@ class ModalCloudProvider(TranscriptionProvider):
             return TranscriptResult(
                 provider_job_id=job_id,
                 status=TranscriptionStatus.FAILED,
-                error_message=str(e)
+                error_message=str(e),
             )
 
     async def transcribe_batch(
-        self,
-        audio_paths: list[Path],
-        language: str = "en"
+        self, audio_paths: list[Path], language: str = "en"
     ) -> list[TranscriptResult]:
         """
         Transcribe multiple files in parallel on Modal.
@@ -313,7 +306,9 @@ class ModalCloudProvider(TranscriptionProvider):
         This is the most cost-effective way to use Modal - the GPU container
         stays warm and processes all files efficiently.
         """
-        logger.info(f"Starting batch transcription of {len(audio_paths)} files on Modal")
+        logger.info(
+            f"Starting batch transcription of {len(audio_paths)} files on Modal"
+        )
 
         self._check_modal_available()
         transcriber = self._get_transcriber()
@@ -321,34 +316,40 @@ class ModalCloudProvider(TranscriptionProvider):
         # Prepare all audio data
         batch_data = []
         for i, path in enumerate(audio_paths):
-            batch_data.append({
-                "audio_bytes": path.read_bytes(),
-                "language": language,
-                "job_id": str(uuid.uuid4()),
-            })
+            batch_data.append(
+                {
+                    "audio_bytes": path.read_bytes(),
+                    "language": language,
+                    "job_id": str(uuid.uuid4()),
+                }
+            )
 
         # Run all transcriptions in parallel using Modal's map
         loop = asyncio.get_event_loop()
 
         results = await loop.run_in_executor(
             None,
-            lambda: list(transcriber.transcribe.map(
-                [d["audio_bytes"] for d in batch_data],
-                kwargs={
-                    "language": language,
-                }
-            ))
+            lambda: list(
+                transcriber.transcribe.map(
+                    [d["audio_bytes"] for d in batch_data],
+                    kwargs={
+                        "language": language,
+                    },
+                )
+            ),
         )
 
         # Convert results
         transcript_results = []
         for i, result in enumerate(results):
             if result.get("status") == "failed":
-                transcript_results.append(TranscriptResult(
-                    provider_job_id=batch_data[i]["job_id"],
-                    status=TranscriptionStatus.FAILED,
-                    error_message=result.get("error", "Unknown error")
-                ))
+                transcript_results.append(
+                    TranscriptResult(
+                        provider_job_id=batch_data[i]["job_id"],
+                        status=TranscriptionStatus.FAILED,
+                        error_message=result.get("error", "Unknown error"),
+                    )
+                )
             else:
                 utterances = [
                     Utterance(
@@ -364,14 +365,16 @@ class ModalCloudProvider(TranscriptionProvider):
                 duration_hours = result.get("duration_ms", 0) / 1000 / 3600
                 estimated_cost = int(duration_hours * self.COST_PER_HOUR_CENTS)
 
-                transcript_results.append(TranscriptResult(
-                    provider_job_id=batch_data[i]["job_id"],
-                    status=TranscriptionStatus.COMPLETED,
-                    utterances=utterances,
-                    full_text=result.get("full_text", ""),
-                    duration_ms=result.get("duration_ms"),
-                    cost_cents=estimated_cost,
-                ))
+                transcript_results.append(
+                    TranscriptResult(
+                        provider_job_id=batch_data[i]["job_id"],
+                        status=TranscriptionStatus.COMPLETED,
+                        utterances=utterances,
+                        full_text=result.get("full_text", ""),
+                        duration_ms=result.get("duration_ms"),
+                        cost_cents=estimated_cost,
+                    )
+                )
 
         logger.info(f"Batch transcription complete: {len(transcript_results)} results")
         return transcript_results

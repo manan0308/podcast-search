@@ -109,7 +109,5 @@ class SearchService:
 
     async def _get_channel_by_slug(self, slug: str) -> Channel | None:
         """Get channel by slug."""
-        result = await self.db.execute(
-            select(Channel).where(Channel.slug == slug)
-        )
+        result = await self.db.execute(select(Channel).where(Channel.slug == slug))
         return result.scalar_one_or_none()

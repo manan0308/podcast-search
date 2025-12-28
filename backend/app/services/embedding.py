@@ -16,8 +16,7 @@ class EmbeddingService:
         self.dimensions = settings.EMBEDDING_DIMENSIONS
 
     @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10)
+        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10)
     )
     async def embed_texts(
         self,
@@ -43,7 +42,7 @@ class EmbeddingService:
 
         # Process in batches
         for i in range(0, len(texts), batch_size):
-            batch = texts[i:i + batch_size]
+            batch = texts[i : i + batch_size]
 
             response = await self.client.embeddings.create(
                 model=self.model,
@@ -58,14 +57,15 @@ class EmbeddingService:
 
             all_embeddings.extend(batch_embeddings)
 
-            logger.debug(f"Embedded batch {i // batch_size + 1}/{(len(texts) + batch_size - 1) // batch_size}")
+            logger.debug(
+                f"Embedded batch {i // batch_size + 1}/{(len(texts) + batch_size - 1) // batch_size}"
+            )
 
         logger.info(f"Generated {len(all_embeddings)} embeddings")
         return all_embeddings
 
     @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10)
+        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10)
     )
     async def embed_query(self, query: str) -> list[float]:
         """
@@ -108,10 +108,7 @@ class EmbeddingService:
         logger.info(f"Generating embeddings for {len(texts)} texts (parallel)")
 
         # Split into batches
-        batches = [
-            texts[i:i + batch_size]
-            for i in range(0, len(texts), batch_size)
-        ]
+        batches = [texts[i : i + batch_size] for i in range(0, len(texts), batch_size)]
 
         # Semaphore for concurrency control
         semaphore = asyncio.Semaphore(max_concurrent)
@@ -132,10 +129,7 @@ class EmbeddingService:
                 return batch_idx, batch_embeddings
 
         # Process all batches concurrently
-        tasks = [
-            embed_batch(batch, idx)
-            for idx, batch in enumerate(batches)
-        ]
+        tasks = [embed_batch(batch, idx) for idx, batch in enumerate(batches)]
 
         results = await asyncio.gather(*tasks)
 

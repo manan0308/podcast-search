@@ -32,21 +32,19 @@ async def create_episode(
 
     if not channel:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Channel not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Channel not found"
         )
 
     # Check if episode already exists
     existing = await db.execute(
         select(Episode).where(
             Episode.channel_id == episode.channel_id,
-            Episode.youtube_id == episode.youtube_id
+            Episode.youtube_id == episode.youtube_id,
         )
     )
     if existing.scalar_one_or_none():
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Episode already exists"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Episode already exists"
         )
 
     db_episode = Episode(
@@ -74,7 +72,9 @@ async def create_episode(
     return EpisodeResponse.model_validate(db_episode)
 
 
-@router.post("/bulk", response_model=list[EpisodeResponse], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/bulk", response_model=list[EpisodeResponse], status_code=status.HTTP_201_CREATED
+)
 async def create_episodes_bulk(
     bulk: EpisodeBulkCreate,
     db: DB,
@@ -89,8 +89,7 @@ async def create_episodes_bulk(
 
     if not channel:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Channel not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Channel not found"
         )
 
     # Get existing youtube IDs for this channel
@@ -175,10 +174,7 @@ async def list_episodes(
     if search:
         # Escape special LIKE characters: % _ \
         escaped_search = (
-            search
-            .replace("\\", "\\\\")
-            .replace("%", "\\%")
-            .replace("_", "\\_")
+            search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         )
         query = query.where(Episode.title.ilike(f"%{escaped_search}%", escape="\\"))
 
@@ -215,8 +211,7 @@ async def get_episode(episode_id: UUID, db: DB):
 
     if not episode:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Episode not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Episode not found"
         )
 
     # Get channel info
@@ -237,16 +232,18 @@ async def get_episode(episode_id: UUID, db: DB):
         seconds = total_seconds % 60
         timestamp = f"{minutes}:{seconds:02d}"
 
-        utterance_responses.append(UtteranceResponse(
-            id=u.id,
-            speaker=u.speaker,
-            speaker_raw=u.speaker_raw,
-            text=u.text,
-            start_ms=u.start_ms,
-            end_ms=u.end_ms,
-            confidence=u.confidence,
-            timestamp=timestamp,
-        ))
+        utterance_responses.append(
+            UtteranceResponse(
+                id=u.id,
+                speaker=u.speaker,
+                speaker_raw=u.speaker_raw,
+                text=u.text,
+                start_ms=u.start_ms,
+                end_ms=u.end_ms,
+                confidence=u.confidence,
+                timestamp=timestamp,
+            )
+        )
 
     return EpisodeDetailResponse(
         id=episode.id,
@@ -276,19 +273,17 @@ async def delete_episode(
     _: AdminAuth,
 ):
     """Delete episode and all associated data."""
-    result = await db.execute(
-        select(Episode).where(Episode.id == episode_id)
-    )
+    result = await db.execute(select(Episode).where(Episode.id == episode_id))
     episode = result.scalar_one_or_none()
 
     if not episode:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Episode not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Episode not found"
         )
 
     # Delete from vector store
     from app.services.vector_store import VectorStoreService
+
     vector_store = VectorStoreService()
     await vector_store.delete_by_episode(str(episode_id))
 
@@ -319,21 +314,18 @@ async def retry_episode(
     _: AdminAuth,
 ):
     """Retry a failed episode."""
-    result = await db.execute(
-        select(Episode).where(Episode.id == episode_id)
-    )
+    result = await db.execute(select(Episode).where(Episode.id == episode_id))
     episode = result.scalar_one_or_none()
 
     if not episode:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Episode not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Episode not found"
         )
 
     if episode.status != "failed":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Can only retry failed episodes"
+            detail="Can only retry failed episodes",
         )
 
     # Reset status to pending

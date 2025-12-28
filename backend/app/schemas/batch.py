@@ -6,6 +6,7 @@ from typing import Literal, Optional
 
 class EpisodeData(BaseModel):
     """Episode data from YouTube fetch for batch creation."""
+
     youtube_id: str
     title: str
     description: Optional[str] = None
@@ -16,6 +17,7 @@ class EpisodeData(BaseModel):
 
 class ChannelData(BaseModel):
     """Channel data from YouTube fetch for batch creation."""
+
     name: str
     youtube_channel_id: str
     youtube_url: Optional[str] = None
@@ -25,6 +27,7 @@ class ChannelData(BaseModel):
 
 class BatchCreate(BaseModel):
     """Create a batch - either from existing channel/episodes or from YouTube data."""
+
     # Option 1: Existing channel
     channel_id: Optional[UUID] = None
     episode_ids: Optional[list[UUID]] = None
@@ -34,7 +37,9 @@ class BatchCreate(BaseModel):
     episodes_data: Optional[list[EpisodeData]] = None
 
     # Common fields
-    provider: str = Field(description="Provider name: assemblyai, deepgram, faster-whisper, modal-cloud")
+    provider: str = Field(
+        description="Provider name: assemblyai, deepgram, faster-whisper, modal-cloud"
+    )
     concurrency: int = Field(default=10, ge=1, le=100)
     speakers: list[str] = Field(default_factory=list)
     config: dict = Field(default_factory=dict)
@@ -42,6 +47,7 @@ class BatchCreate(BaseModel):
 
 class BatchStartRequest(BaseModel):
     """Request to start a batch that's in pending state."""
+
     pass
 
 

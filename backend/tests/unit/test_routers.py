@@ -3,6 +3,7 @@ Unit tests for API routers.
 
 Tests router logic with mocked dependencies.
 """
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -76,10 +77,13 @@ class TestChannelRouter:
     @pytest.mark.asyncio
     async def test_create_channel_requires_auth(self, client):
         """Creating channel should require admin auth."""
-        response = await client.post("/api/channels", json={
-            "slug": "new-channel",
-            "name": "New Channel",
-        })
+        response = await client.post(
+            "/api/channels",
+            json={
+                "slug": "new-channel",
+                "name": "New Channel",
+            },
+        )
         assert response.status_code == 401
 
     @pytest.mark.asyncio
@@ -100,7 +104,9 @@ class TestChannelRouter:
         assert data["speakers"] == ["Host", "Guest"]
 
     @pytest.mark.asyncio
-    async def test_create_channel_auto_increments_slug(self, db_session, client, admin_headers):
+    async def test_create_channel_auto_increments_slug(
+        self, db_session, client, admin_headers
+    ):
         """Should auto-increment slug when duplicate exists."""
         channel = Channel(
             id=uuid4(),
@@ -112,7 +118,9 @@ class TestChannelRouter:
 
         response = await client.post(
             "/api/channels",
-            json={"name": "Existing Channel"},  # Same name, should get slug "existing-channel-1"
+            json={
+                "name": "Existing Channel"
+            },  # Same name, should get slug "existing-channel-1"
             headers=admin_headers,
         )
         assert response.status_code == 201
@@ -258,11 +266,14 @@ class TestEpisodeRouter:
         db_session.add(channel)
         await db_session.commit()
 
-        response = await client.post("/api/episodes", json={
-            "channel_id": str(channel.id),
-            "youtube_id": "newvid",
-            "title": "New Episode",
-        })
+        response = await client.post(
+            "/api/episodes",
+            json={
+                "channel_id": str(channel.id),
+                "youtube_id": "newvid",
+                "title": "New Episode",
+            },
+        )
         assert response.status_code == 401
 
     @pytest.mark.asyncio
@@ -377,11 +388,14 @@ class TestBatchRouter:
     @pytest.mark.asyncio
     async def test_create_batch_requires_auth(self, client):
         """Creating batch should require admin auth."""
-        response = await client.post("/api/batches", json={
-            "provider": "deepgram",
-            "channel_id": str(uuid4()),
-            "episode_ids": [str(uuid4())],
-        })
+        response = await client.post(
+            "/api/batches",
+            json={
+                "provider": "deepgram",
+                "channel_id": str(uuid4()),
+                "episode_ids": [str(uuid4())],
+            },
+        )
         assert response.status_code == 401
 
     @pytest.mark.asyncio
@@ -418,14 +432,16 @@ class TestSearchRouter:
         # Mock the search service to avoid Qdrant connection
         mock_service = AsyncMock()
         mock_service.search.return_value = ([], 10)  # processing_time_ms must be int
-        with patch('app.routers.search.HybridSearchService', return_value=mock_service):
+        with patch("app.routers.search.HybridSearchService", return_value=mock_service):
             response = await client.post("/api/search", json={"query": "ai"})
             assert response.status_code == 200
 
     @pytest.mark.asyncio
     async def test_search_validates_limit(self, client):
         """Search should validate limit parameter."""
-        response = await client.post("/api/search", json={"query": "test", "limit": 500})
+        response = await client.post(
+            "/api/search", json={"query": "test", "limit": 500}
+        )
         assert response.status_code == 422
 
 

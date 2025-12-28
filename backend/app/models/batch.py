@@ -10,7 +10,9 @@ class Batch(Base):
     __tablename__ = "batches"
 
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
-    channel_id = Column(GUID(), ForeignKey("channels.id", ondelete="SET NULL"), nullable=True)
+    channel_id = Column(
+        GUID(), ForeignKey("channels.id", ondelete="SET NULL"), nullable=True
+    )
 
     # Configuration
     name = Column(String(255), nullable=True)
@@ -43,7 +45,9 @@ class Batch(Base):
     # Relationships
     channel = relationship("Channel", back_populates="batches")
     jobs = relationship("Job", back_populates="batch", cascade="all, delete-orphan")
-    activity_logs = relationship("ActivityLog", back_populates="batch", cascade="all, delete-orphan")
+    activity_logs = relationship(
+        "ActivityLog", back_populates="batch", cascade="all, delete-orphan"
+    )
 
     # Indexes
     __table_args__ = (

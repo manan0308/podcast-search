@@ -1,6 +1,7 @@
 """
 Transcription CLI commands.
 """
+
 import asyncio
 from typing import Optional
 import typer
@@ -34,7 +35,11 @@ def list_providers():
 
     for p in providers:
         available = "[green]Yes[/green]" if p["available"] else "[red]No[/red]"
-        cost = f"${p['cost_per_hour_cents']/100:.2f}" if p["cost_per_hour_cents"] > 0 else "FREE"
+        cost = (
+            f"${p['cost_per_hour_cents']/100:.2f}"
+            if p["cost_per_hour_cents"] > 0
+            else "FREE"
+        )
         table.add_row(
             p["name"],
             p["display_name"],
@@ -50,10 +55,16 @@ def list_providers():
 @app.command("batch")
 def create_batch(
     channel: str = typer.Argument(..., help="Channel name, slug, or ID"),
-    provider: str = typer.Option("modal-hybrid", "--provider", "-p", help="Transcription provider"),
+    provider: str = typer.Option(
+        "modal-hybrid", "--provider", "-p", help="Transcription provider"
+    ),
     concurrency: int = typer.Option(10, "--concurrency", "-c", help="Concurrent jobs"),
-    limit: Optional[int] = typer.Option(None, "--limit", "-l", help="Max episodes to process"),
-    start: bool = typer.Option(True, "--start/--no-start", help="Start batch immediately"),
+    limit: Optional[int] = typer.Option(
+        None, "--limit", "-l", help="Max episodes to process"
+    ),
+    start: bool = typer.Option(
+        True, "--start/--no-start", help="Start batch immediately"
+    ),
 ):
     """Create a transcription batch for a channel."""
     from uuid import uuid4
@@ -83,7 +94,9 @@ def create_batch(
             episodes = result.scalars().all()
 
             if not episodes:
-                console.print(f"[yellow]No pending episodes found for '{ch.name}'[/yellow]")
+                console.print(
+                    f"[yellow]No pending episodes found for '{ch.name}'[/yellow]"
+                )
                 return
 
             console.print(f"\nChannel: [bold]{ch.name}[/bold]")
@@ -94,6 +107,7 @@ def create_batch(
             total_duration = sum(e.duration_seconds or 0 for e in episodes)
             hours = total_duration / 3600
             from app.services.transcription import get_provider
+
             try:
                 prov = get_provider(provider)
                 cost_estimate = hours * prov.cost_per_hour_cents / 100
@@ -137,10 +151,13 @@ def create_batch(
             if start:
                 # Start the batch
                 from app.tasks.transcription import process_batch_task
+
                 process_batch_task.delay(str(batch.id))
                 console.print("[green]Batch started![/green]")
             else:
-                console.print("[yellow]Batch created but not started. Use 'jobs start' to begin.[/yellow]")
+                console.print(
+                    "[yellow]Batch created but not started. Use 'jobs start' to begin.[/yellow]"
+                )
 
     asyncio.run(_batch())
 
@@ -148,8 +165,12 @@ def create_batch(
 @app.command("hybrid")
 def hybrid_transcribe(
     channel: str = typer.Argument(..., help="Channel name, slug, or ID"),
-    limit: Optional[int] = typer.Option(None, "--limit", "-l", help="Max episodes to process"),
-    download_workers: int = typer.Option(10, "--download-workers", "-d", help="Parallel downloads"),
+    limit: Optional[int] = typer.Option(
+        None, "--limit", "-l", help="Max episodes to process"
+    ),
+    download_workers: int = typer.Option(
+        10, "--download-workers", "-d", help="Parallel downloads"
+    ),
 ):
     """
     Run hybrid transcription: download locally, transcribe on Modal.
@@ -293,7 +314,9 @@ def hybrid_transcribe(
 def transcribe_single(
     youtube_id: str = typer.Argument(..., help="YouTube video ID or URL"),
     provider: str = typer.Option("faster-whisper", "--provider", "-p", help="Provider"),
-    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path"),
+    output: Optional[str] = typer.Option(
+        None, "--output", "-o", help="Output file path"
+    ),
 ):
     """Transcribe a single YouTube video."""
     from pathlib import Path
@@ -303,6 +326,7 @@ def transcribe_single(
     # Extract video ID from URL if needed
     if "youtube.com" in youtube_id or "youtu.be" in youtube_id:
         import re
+
         match = re.search(r"(?:v=|/)([a-zA-Z0-9_-]{11})", youtube_id)
         if match:
             youtube_id = match.group(1)

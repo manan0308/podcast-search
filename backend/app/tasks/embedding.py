@@ -1,4 +1,5 @@
 """Embedding tasks for Celery."""
+
 import hashlib
 import json
 from typing import Optional
@@ -57,10 +58,14 @@ def embed_chunks_task(self, chunks: list[dict]) -> list[list[float]]:
 
         # Generate embeddings for cache misses using parallel method
         if texts_to_embed:
-            new_embeddings = await embedding_service.embed_texts_parallel(texts_to_embed, max_concurrent=5)
+            new_embeddings = await embedding_service.embed_texts_parallel(
+                texts_to_embed, max_concurrent=5
+            )
 
             # Batch cache new embeddings
-            new_cache_entries = {text: emb for text, emb in zip(texts_to_embed, new_embeddings)}
+            new_cache_entries = {
+                text: emb for text, emb in zip(texts_to_embed, new_embeddings)
+            }
             await embedding_cache.set_many(new_cache_entries)
 
             # Collect results
@@ -113,7 +118,9 @@ def embed_query_task(self, query: str) -> list[float]:
     bind=True,
     name="app.tasks.embedding.batch_embed",
 )
-def batch_embed_task(self, texts: list[str], batch_size: int = 100) -> list[list[float]]:
+def batch_embed_task(
+    self, texts: list[str], batch_size: int = 100
+) -> list[list[float]]:
     """
     Embed a large number of texts in batches.
 
@@ -126,7 +133,7 @@ def batch_embed_task(self, texts: list[str], batch_size: int = 100) -> list[list
         all_embeddings = []
 
         for i in range(0, len(texts), batch_size):
-            batch = texts[i:i + batch_size]
+            batch = texts[i : i + batch_size]
             embeddings = await embedding_service.embed_texts(batch)
             all_embeddings.extend(embeddings)
             logger.info(f"Embedded batch {i // batch_size + 1}")

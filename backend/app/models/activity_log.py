@@ -12,9 +12,13 @@ class ActivityLog(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     # Context
-    batch_id = Column(GUID(), ForeignKey("batches.id", ondelete="CASCADE"), nullable=True)
+    batch_id = Column(
+        GUID(), ForeignKey("batches.id", ondelete="CASCADE"), nullable=True
+    )
     job_id = Column(GUID(), ForeignKey("jobs.id", ondelete="CASCADE"), nullable=True)
-    episode_id = Column(GUID(), ForeignKey("episodes.id", ondelete="CASCADE"), nullable=True)
+    episode_id = Column(
+        GUID(), ForeignKey("episodes.id", ondelete="CASCADE"), nullable=True
+    )
 
     # Log data
     level = Column(String(10), default="info", nullable=False)

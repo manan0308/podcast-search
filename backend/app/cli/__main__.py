@@ -3,6 +3,7 @@ Main CLI entry point.
 
 Run with: python -m app.cli
 """
+
 import typer
 from rich.console import Console
 

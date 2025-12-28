@@ -61,16 +61,13 @@ async def list_batches(
 async def get_batch(batch_id: UUID, db: DB):
     """Get batch details with jobs."""
     result = await db.execute(
-        select(Batch)
-        .options(selectinload(Batch.jobs))
-        .where(Batch.id == batch_id)
+        select(Batch).options(selectinload(Batch.jobs)).where(Batch.id == batch_id)
     )
     batch = result.scalar_one_or_none()
 
     if not batch:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Batch not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found"
         )
 
     # Get channel info
@@ -98,18 +95,20 @@ async def get_batch(batch_id: UUID, db: DB):
     for job in sorted(batch.jobs, key=lambda j: j.created_at):
         episode_title = episode_titles.get(job.episode_id, "Unknown")
 
-        jobs.append(JobSummary(
-            id=job.id,
-            episode_id=job.episode_id,
-            episode_title=episode_title,
-            status=job.status,
-            progress=job.progress,
-            current_step=job.current_step,
-            error_message=job.error_message,
-            cost_cents=job.cost_cents,
-            started_at=job.started_at,
-            completed_at=job.completed_at,
-        ))
+        jobs.append(
+            JobSummary(
+                id=job.id,
+                episode_id=job.episode_id,
+                episode_title=episode_title,
+                status=job.status,
+                progress=job.progress,
+                current_step=job.current_step,
+                error_message=job.error_message,
+                cost_cents=job.cost_cents,
+                started_at=job.started_at,
+                completed_at=job.completed_at,
+            )
+        )
 
     return BatchDetailResponse(
         id=batch.id,
@@ -152,10 +151,7 @@ async def create_batch(
     try:
         provider = get_provider(batch_create.provider)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     channel = None
     episode_ids = []
@@ -170,8 +166,7 @@ async def create_batch(
 
         if not channel:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Channel not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Channel not found"
             )
 
         episode_ids = batch_create.episode_ids
@@ -202,9 +197,7 @@ async def create_batch(
             slug = base_slug
             counter = 1
             while True:
-                existing = await db.execute(
-                    select(Channel).where(Channel.slug == slug)
-                )
+                existing = await db.execute(select(Channel).where(Channel.slug == slug))
                 if not existing.scalar_one_or_none():
                     break
                 slug = f"{base_slug}-{counter}"
@@ -237,7 +230,7 @@ async def create_batch(
                 ep_result = await db.execute(
                     select(Episode).where(
                         Episode.channel_id == channel.id,
-                        Episode.youtube_id == ep_data.youtube_id
+                        Episode.youtube_id == ep_data.youtube_id,
                     )
                 )
                 episode = ep_result.scalar_one()
@@ -276,18 +269,19 @@ async def create_batch(
             ep.duration_seconds or 0 for ep in created_episodes
         )
 
-        logger.info(f"Created {len(created_episodes)} episodes for channel {channel.name}")
+        logger.info(
+            f"Created {len(created_episodes)} episodes for channel {channel.name}"
+        )
 
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Must provide either (channel_id + episode_ids) or (channel_data + episodes_data)"
+            detail="Must provide either (channel_id + episode_ids) or (channel_data + episodes_data)",
         )
 
     if not episode_ids:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No episodes to process"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="No episodes to process"
         )
 
     estimated_cost = provider.estimate_cost(total_duration)
@@ -321,9 +315,7 @@ async def create_batch(
         db.add(job)
 
         # Update episode status
-        ep_result = await db.execute(
-            select(Episode).where(Episode.id == episode_id)
-        )
+        ep_result = await db.execute(select(Episode).where(Episode.id == episode_id))
         episode = ep_result.scalar_one_or_none()
         if episode:
             episode.status = "queued"
@@ -342,21 +334,18 @@ async def start_batch(
     _: AdminAuth,
 ):
     """Start processing a pending batch."""
-    result = await db.execute(
-        select(Batch).where(Batch.id == batch_id)
-    )
+    result = await db.execute(select(Batch).where(Batch.id == batch_id))
     batch = result.scalar_one_or_none()
 
     if not batch:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Batch not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found"
         )
 
     if batch.status not in ("pending", "paused"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot start batch with status: {batch.status}"
+            detail=f"Cannot start batch with status: {batch.status}",
         )
 
     # Update batch status
@@ -367,6 +356,7 @@ async def start_batch(
 
     # Start background processing
     from app.workers.batch_processor import process_batch
+
     background_tasks.add_task(process_batch, str(batch_id))
 
     return {"status": "started", "batch_id": str(batch_id)}
@@ -379,21 +369,18 @@ async def pause_batch(
     _: AdminAuth,
 ):
     """Pause a running batch."""
-    result = await db.execute(
-        select(Batch).where(Batch.id == batch_id)
-    )
+    result = await db.execute(select(Batch).where(Batch.id == batch_id))
     batch = result.scalar_one_or_none()
 
     if not batch:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Batch not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found"
         )
 
     if batch.status != "running":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Can only pause running batches"
+            detail="Can only pause running batches",
         )
 
     batch.status = "paused"
@@ -411,21 +398,18 @@ async def resume_batch(
     _: AdminAuth,
 ):
     """Resume a paused batch."""
-    result = await db.execute(
-        select(Batch).where(Batch.id == batch_id)
-    )
+    result = await db.execute(select(Batch).where(Batch.id == batch_id))
     batch = result.scalar_one_or_none()
 
     if not batch:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Batch not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found"
         )
 
     if batch.status != "paused":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Can only resume paused batches"
+            detail="Can only resume paused batches",
         )
 
     batch.status = "running"
@@ -434,6 +418,7 @@ async def resume_batch(
 
     # Resume background processing
     from app.workers.batch_processor import process_batch
+
     background_tasks.add_task(process_batch, str(batch_id))
 
     return {"status": "resumed", "batch_id": str(batch_id)}
@@ -446,21 +431,18 @@ async def cancel_batch(
     _: AdminAuth,
 ):
     """Cancel a batch."""
-    result = await db.execute(
-        select(Batch).where(Batch.id == batch_id)
-    )
+    result = await db.execute(select(Batch).where(Batch.id == batch_id))
     batch = result.scalar_one_or_none()
 
     if not batch:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Batch not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found"
         )
 
     if batch.status in ("completed", "cancelled"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot cancel batch with status: {batch.status}"
+            detail=f"Cannot cancel batch with status: {batch.status}",
         )
 
     batch.status = "cancelled"
@@ -470,7 +452,7 @@ async def cancel_batch(
     jobs_result = await db.execute(
         select(Job).where(
             Job.batch_id == batch_id,
-            Job.status.in_(["pending", "downloading", "uploading"])
+            Job.status.in_(["pending", "downloading", "uploading"]),
         )
     )
     for job in jobs_result.scalars():
@@ -489,22 +471,18 @@ async def retry_batch(
     _: AdminAuth,
 ):
     """Retry all failed/cancelled jobs in a batch."""
-    result = await db.execute(
-        select(Batch).where(Batch.id == batch_id)
-    )
+    result = await db.execute(select(Batch).where(Batch.id == batch_id))
     batch = result.scalar_one_or_none()
 
     if not batch:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Batch not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found"
         )
 
     # Get failed/cancelled jobs
     jobs_result = await db.execute(
         select(Job).where(
-            Job.batch_id == batch_id,
-            Job.status.in_(["failed", "cancelled"])
+            Job.batch_id == batch_id, Job.status.in_(["failed", "cancelled"])
         )
     )
     jobs = jobs_result.scalars().all()
@@ -512,7 +490,7 @@ async def retry_batch(
     if not jobs:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No failed or cancelled jobs to retry"
+            detail="No failed or cancelled jobs to retry",
         )
 
     # Reset jobs to pending
@@ -536,12 +514,13 @@ async def retry_batch(
 
     # Start batch processing
     from app.workers.batch_processor import process_batch
+
     background_tasks.add_task(process_batch, str(batch_id))
 
     return {
         "status": "retrying",
         "batch_id": str(batch_id),
-        "jobs_retried": retry_count
+        "jobs_retried": retry_count,
     }
 
 
@@ -552,21 +531,18 @@ async def delete_batch(
     _: AdminAuth,
 ):
     """Delete a batch (must be completed or cancelled)."""
-    result = await db.execute(
-        select(Batch).where(Batch.id == batch_id)
-    )
+    result = await db.execute(select(Batch).where(Batch.id == batch_id))
     batch = result.scalar_one_or_none()
 
     if not batch:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Batch not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found"
         )
 
     if batch.status in ("running", "pending"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete active batch. Cancel it first."
+            detail="Cannot delete active batch. Cancel it first.",
         )
 
     await db.delete(batch)

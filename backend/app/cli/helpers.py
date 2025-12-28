@@ -1,12 +1,19 @@
 """
 CLI helper functions and utilities.
 """
+
 import asyncio
 from datetime import datetime
 from typing import Optional
 from rich.console import Console
 from rich.table import Table
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    TaskProgressColumn,
+)
 from sqlalchemy import select, func
 
 from app.database import AsyncSessionLocal
@@ -40,7 +47,9 @@ async def get_system_status():
             select(func.count(Job.id)).where(Job.status == "pending")
         )
         processing_jobs = await db.scalar(
-            select(func.count(Job.id)).where(Job.status.in_(["downloading", "transcribing", "labeling", "embedding"]))
+            select(func.count(Job.id)).where(
+                Job.status.in_(["downloading", "transcribing", "labeling", "embedding"])
+            )
         )
 
     table = Table(title="System Status")
@@ -61,9 +70,7 @@ async def get_system_status():
 async def get_channel_list():
     """Get list of all channels."""
     async with AsyncSessionLocal() as db:
-        result = await db.execute(
-            select(Channel).order_by(Channel.created_at.desc())
-        )
+        result = await db.execute(select(Channel).order_by(Channel.created_at.desc()))
         return result.scalars().all()
 
 
@@ -73,10 +80,9 @@ async def get_channel_by_name_or_id(identifier: str) -> Optional[Channel]:
         # Try by ID first
         try:
             from uuid import UUID
+
             uuid_id = UUID(identifier)
-            result = await db.execute(
-                select(Channel).where(Channel.id == uuid_id)
-            )
+            result = await db.execute(select(Channel).where(Channel.id == uuid_id))
             channel = result.scalar_one_or_none()
             if channel:
                 return channel
@@ -84,9 +90,7 @@ async def get_channel_by_name_or_id(identifier: str) -> Optional[Channel]:
             pass
 
         # Try by slug
-        result = await db.execute(
-            select(Channel).where(Channel.slug == identifier)
-        )
+        result = await db.execute(select(Channel).where(Channel.slug == identifier))
         channel = result.scalar_one_or_none()
         if channel:
             return channel
@@ -101,10 +105,9 @@ async def get_channel_by_name_or_id(identifier: str) -> Optional[Channel]:
 async def get_batch_status(batch_id: str):
     """Get batch status with job details."""
     from uuid import UUID
+
     async with AsyncSessionLocal() as db:
-        result = await db.execute(
-            select(Batch).where(Batch.id == UUID(batch_id))
-        )
+        result = await db.execute(select(Batch).where(Batch.id == UUID(batch_id)))
         batch = result.scalar_one_or_none()
         if not batch:
             return None

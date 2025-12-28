@@ -43,11 +43,11 @@ async def chat(
     response = await rag_service.chat(
         message=request.message,
         conversation_id=request.conversation_id,
-        speaker=filters.speaker if hasattr(filters, 'speaker') else None,
-        channel_id=filters.channel_id if hasattr(filters, 'channel_id') else None,
-        channel_slug=filters.channel_slug if hasattr(filters, 'channel_slug') else None,
-        date_from=filters.date_from if hasattr(filters, 'date_from') else None,
-        date_to=filters.date_to if hasattr(filters, 'date_to') else None,
+        speaker=filters.speaker if hasattr(filters, "speaker") else None,
+        channel_id=filters.channel_id if hasattr(filters, "channel_id") else None,
+        channel_slug=filters.channel_slug if hasattr(filters, "channel_slug") else None,
+        date_from=filters.date_from if hasattr(filters, "date_from") else None,
+        date_to=filters.date_to if hasattr(filters, "date_to") else None,
         max_context_chunks=request.max_context_chunks,
     )
 

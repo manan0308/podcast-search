@@ -5,6 +5,7 @@ Uses CTranslate2 for 4x faster inference than OpenAI Whisper.
 - GPU: float16 compute (35-40x realtime)
 - CPU: int8 compute (~4x realtime)
 """
+
 import asyncio
 import uuid
 from pathlib import Path
@@ -70,6 +71,7 @@ class FasterWhisperProvider(TranscriptionProvider):
     def supports_diarization(self) -> bool:
         try:
             import pyannote.audio
+
             return True
         except ImportError:
             return False
@@ -86,6 +88,7 @@ class FasterWhisperProvider(TranscriptionProvider):
         if device == "auto":
             try:
                 import torch
+
                 if torch.cuda.is_available():
                     device = "cuda"
                     logger.info(f"CUDA available: {torch.cuda.get_device_name(0)}")
@@ -132,7 +135,9 @@ class FasterWhisperProvider(TranscriptionProvider):
             except Exception as e:
                 # Fallback to CPU if GPU fails
                 if device == "cuda":
-                    logger.warning(f"GPU initialization failed: {e}, falling back to CPU")
+                    logger.warning(
+                        f"GPU initialization failed: {e}, falling back to CPU"
+                    )
                     self._model = WhisperModel(
                         self._model_name,
                         device="cpu",
@@ -159,13 +164,13 @@ class FasterWhisperProvider(TranscriptionProvider):
 
                 logger.info("Loading pyannote speaker diarization pipeline...")
                 self._diarization_pipeline = Pipeline.from_pretrained(
-                    "pyannote/speaker-diarization-3.1",
-                    use_auth_token=hf_token
+                    "pyannote/speaker-diarization-3.1", use_auth_token=hf_token
                 )
 
                 # Move to GPU if available
                 try:
                     import torch
+
                     if torch.cuda.is_available():
                         self._diarization_pipeline.to(torch.device("cuda"))
                         logger.info("Diarization pipeline moved to GPU")
@@ -184,10 +189,7 @@ class FasterWhisperProvider(TranscriptionProvider):
         return self._diarization_pipeline
 
     async def submit_job(
-        self,
-        audio_path: Path,
-        speakers_expected: int = 2,
-        language: str = "en"
+        self, audio_path: Path, speakers_expected: int = 2, language: str = "en"
     ) -> str:
         """Submit audio for local faster-whisper transcription."""
         job_id = str(uuid.uuid4())
@@ -196,15 +198,11 @@ class FasterWhisperProvider(TranscriptionProvider):
     async def get_status(self, provider_job_id: str) -> TranscriptResult:
         """Local processing is synchronous, status always completed."""
         return TranscriptResult(
-            provider_job_id=provider_job_id,
-            status=TranscriptionStatus.COMPLETED
+            provider_job_id=provider_job_id, status=TranscriptionStatus.COMPLETED
         )
 
     async def transcribe(
-        self,
-        audio_path: Path,
-        speakers_expected: int = 2,
-        language: str = "en"
+        self, audio_path: Path, speakers_expected: int = 2, language: str = "en"
     ) -> TranscriptResult:
         """Transcribe audio using faster-whisper."""
         job_id = str(uuid.uuid4())
@@ -214,15 +212,14 @@ class FasterWhisperProvider(TranscriptionProvider):
             # Run CPU/GPU-intensive transcription in thread pool
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(
-                None,
-                lambda: self._transcribe_sync(audio_path, language)
+                None, lambda: self._transcribe_sync(audio_path, language)
             )
 
             # Apply diarization if available and requested
             if speakers_expected > 1 and self.supports_diarization:
                 diarization_result = await loop.run_in_executor(
                     None,
-                    lambda: self._diarize_sync(audio_path, result, speakers_expected)
+                    lambda: self._diarize_sync(audio_path, result, speakers_expected),
                 )
                 if diarization_result:
                     result = diarization_result
@@ -240,7 +237,7 @@ class FasterWhisperProvider(TranscriptionProvider):
                 full_text=result["full_text"],
                 duration_ms=result["duration_ms"],
                 cost_cents=0,
-                raw_response=result.get("raw")
+                raw_response=result.get("raw"),
             )
 
         except Exception as e:
@@ -248,7 +245,7 @@ class FasterWhisperProvider(TranscriptionProvider):
             return TranscriptResult(
                 provider_job_id=job_id,
                 status=TranscriptionStatus.FAILED,
-                error_message=str(e)
+                error_message=str(e),
             )
 
     def _transcribe_sync(self, audio_path: Path, language: str) -> dict:
@@ -280,22 +277,32 @@ class FasterWhisperProvider(TranscriptionProvider):
         for segment in segments:
             text = segment.text.strip()
             if text:
-                utterances.append(Utterance(
-                    speaker="A",  # Single speaker without diarization
-                    text=text,
-                    start_ms=int(segment.start * 1000),
-                    end_ms=int(segment.end * 1000),
-                    confidence=segment.avg_logprob if hasattr(segment, 'avg_logprob') else None,
-                    words=[
-                        {
-                            "word": w.word,
-                            "start": w.start,
-                            "end": w.end,
-                            "probability": w.probability,
-                        }
-                        for w in (segment.words or [])
-                    ] if segment.words else None,
-                ))
+                utterances.append(
+                    Utterance(
+                        speaker="A",  # Single speaker without diarization
+                        text=text,
+                        start_ms=int(segment.start * 1000),
+                        end_ms=int(segment.end * 1000),
+                        confidence=(
+                            segment.avg_logprob
+                            if hasattr(segment, "avg_logprob")
+                            else None
+                        ),
+                        words=(
+                            [
+                                {
+                                    "word": w.word,
+                                    "start": w.start,
+                                    "end": w.end,
+                                    "probability": w.probability,
+                                }
+                                for w in (segment.words or [])
+                            ]
+                            if segment.words
+                            else None
+                        ),
+                    )
+                )
                 full_text_parts.append(text)
 
         return {
@@ -306,14 +313,11 @@ class FasterWhisperProvider(TranscriptionProvider):
                 "language": info.language,
                 "language_probability": info.language_probability,
                 "duration": info.duration,
-            }
+            },
         }
 
     def _diarize_sync(
-        self,
-        audio_path: Path,
-        whisper_result: dict,
-        num_speakers: int = 2
+        self, audio_path: Path, whisper_result: dict, num_speakers: int = 2
     ) -> Optional[dict]:
         """Apply speaker diarization to faster-whisper results."""
         pipeline = self._load_diarization()
@@ -321,7 +325,9 @@ class FasterWhisperProvider(TranscriptionProvider):
             return None
 
         try:
-            logger.info(f"Running speaker diarization (expecting {num_speakers} speakers)")
+            logger.info(
+                f"Running speaker diarization (expecting {num_speakers} speakers)"
+            )
 
             # Run diarization with speaker count hint
             diarization = pipeline(
@@ -350,14 +356,16 @@ class FasterWhisperProvider(TranscriptionProvider):
                         speaker_label = speaker_map[spk]
                         break
 
-                utterances.append(Utterance(
-                    speaker=speaker_label,
-                    text=utt.text,
-                    start_ms=utt.start_ms,
-                    end_ms=utt.end_ms,
-                    confidence=utt.confidence,
-                    words=utt.words,
-                ))
+                utterances.append(
+                    Utterance(
+                        speaker=speaker_label,
+                        text=utt.text,
+                        start_ms=utt.start_ms,
+                        end_ms=utt.end_ms,
+                        confidence=utt.confidence,
+                        words=utt.words,
+                    )
+                )
 
             logger.info(f"Diarization complete: {len(speaker_map)} speakers detected")
 
@@ -369,7 +377,7 @@ class FasterWhisperProvider(TranscriptionProvider):
                     **whisper_result.get("raw", {}),
                     "speakers_detected": len(speaker_map),
                     "speaker_map": speaker_map,
-                }
+                },
             }
 
         except Exception as e:

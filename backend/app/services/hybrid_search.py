@@ -1,4 +1,5 @@
 """Hybrid search combining semantic and keyword search with re-ranking."""
+
 import time
 from datetime import datetime
 from uuid import UUID
@@ -137,7 +138,9 @@ class HybridSearchService:
             keyword_weight=keyword_weight,
         )
 
-        logger.info(f"Combined {len(semantic_results)} semantic + {len(keyword_results)} keyword = {len(combined)} candidates")
+        logger.info(
+            f"Combined {len(semantic_results)} semantic + {len(keyword_results)} keyword = {len(combined)} candidates"
+        )
 
         # Apply MMR diversity to prevent redundant results from same minute
         # Do this before reranking to ensure diverse candidates
@@ -147,7 +150,9 @@ class HybridSearchService:
         if use_reranking and combined:
             # Rerank top 50 candidates for better quality
             rerank_pool = min(50, len(combined))
-            combined = await self.reranker.rerank(query, combined[:rerank_pool], top_k=limit)
+            combined = await self.reranker.rerank(
+                query, combined[:rerank_pool], top_k=limit
+            )
         else:
             combined = combined[:limit]
 
@@ -233,19 +238,21 @@ class HybridSearchService:
         # Convert to dict format matching semantic results
         results = []
         for result in keyword_results:
-            results.append({
-                "id": str(result.chunk_id),
-                "chunk_id": str(result.chunk_id),
-                "episode_id": str(result.episode_id),
-                "channel_id": str(result.channel_id),
-                "text": result.text,
-                "speaker": result.primary_speaker,
-                "speakers": result.speakers,
-                "start_ms": result.start_ms,
-                "end_ms": result.end_ms,
-                "score": result.rank,  # ts_rank score (already 0-1 range)
-                "search_type": "keyword",
-            })
+            results.append(
+                {
+                    "id": str(result.chunk_id),
+                    "chunk_id": str(result.chunk_id),
+                    "episode_id": str(result.episode_id),
+                    "channel_id": str(result.channel_id),
+                    "text": result.text,
+                    "speaker": result.primary_speaker,
+                    "speakers": result.speakers,
+                    "start_ms": result.start_ms,
+                    "end_ms": result.end_ms,
+                    "score": result.rank,  # ts_rank score (already 0-1 range)
+                    "search_type": "keyword",
+                }
+            )
 
         return results
 
@@ -326,7 +333,7 @@ class HybridSearchService:
 
         while remaining and len(selected) < len(results):
             best_idx = 0
-            best_score = float('-inf')
+            best_score = float("-inf")
 
             for i, candidate in enumerate(remaining):
                 # Relevance score (from RRF)
@@ -335,11 +342,15 @@ class HybridSearchService:
                 # Diversity penalty: check overlap with selected results
                 max_similarity = 0
                 for sel in selected:
-                    similarity = self._compute_temporal_similarity(candidate, sel, time_window_ms)
+                    similarity = self._compute_temporal_similarity(
+                        candidate, sel, time_window_ms
+                    )
                     max_similarity = max(max_similarity, similarity)
 
                 # MMR score: balance relevance with diversity
-                mmr_score = lambda_param * relevance - (1 - lambda_param) * max_similarity
+                mmr_score = (
+                    lambda_param * relevance - (1 - lambda_param) * max_similarity
+                )
 
                 if mmr_score > best_score:
                     best_score = mmr_score
@@ -378,7 +389,5 @@ class HybridSearchService:
 
     async def _get_channel_by_slug(self, slug: str) -> Optional[Channel]:
         """Get channel by slug."""
-        result = await self.db.execute(
-            select(Channel).where(Channel.slug == slug)
-        )
+        result = await self.db.execute(select(Channel).where(Channel.slug == slug))
         return result.scalar_one_or_none()

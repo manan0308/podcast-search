@@ -9,6 +9,7 @@ from app.config import settings
 @dataclass
 class Chunk:
     """A chunk of transcript text for embedding."""
+
     text: str  # Raw text for display
     text_for_embedding: str  # Enriched text with context headers for embedding
     primary_speaker: str | None
@@ -22,6 +23,7 @@ class Chunk:
 @dataclass
 class EpisodeContext:
     """Context metadata for enriching chunks."""
+
     episode_title: str
     channel_name: str
     published_at: datetime | None = None
@@ -84,12 +86,16 @@ class ChunkingService:
 
             if current_word_count >= self.target_chunk_size:
                 should_break = True
-            elif (current_word_count >= self.target_chunk_size * 0.7 and
-                  self._is_good_break_point(current_chunk_utterances, utt)):
+            elif (
+                current_word_count >= self.target_chunk_size * 0.7
+                and self._is_good_break_point(current_chunk_utterances, utt)
+            ):
                 # Break at speaker change or pause if we're close to target
                 should_break = True
-            elif (current_word_count >= self.target_chunk_size * 0.5 and
-                  self._detect_topic_shift(current_chunk_utterances, utt)):
+            elif (
+                current_word_count >= self.target_chunk_size * 0.5
+                and self._detect_topic_shift(current_chunk_utterances, utt)
+            ):
                 # Break at topic shift even if smaller (min 50% of target)
                 should_break = True
 
@@ -107,8 +113,7 @@ class ChunkingService:
                     current_chunk_utterances
                 )
                 current_word_count = sum(
-                    len(u.get("text", "").split())
-                    for u in current_chunk_utterances
+                    len(u.get("text", "").split()) for u in current_chunk_utterances
                 )
 
             current_chunk_utterances.append(utt)
@@ -138,9 +143,7 @@ class ChunkingService:
         return chunks
 
     def _is_good_break_point(
-        self,
-        current_utterances: list[dict],
-        next_utterance: dict
+        self, current_utterances: list[dict], next_utterance: dict
     ) -> bool:
         """
         Check if this is a good point to break the chunk.
@@ -171,7 +174,7 @@ class ChunkingService:
 
         # Moderate signal: sentence-ending + medium pause
         last_text = last_utt.get("text", "").strip()
-        ends_with_terminal = last_text.endswith(('.', '?', '!'))
+        ends_with_terminal = last_text.endswith((".", "?", "!"))
 
         if ends_with_terminal and pause_ms > 1000:
             return True
@@ -199,9 +202,16 @@ class ChunkingService:
 
         # Transition markers indicating new topic
         transition_markers = [
-            "anyway", "moving on", "let's talk about", "speaking of",
-            "on another note", "changing topics", "now let's",
-            "the next thing", "another question", "so tell me about",
+            "anyway",
+            "moving on",
+            "let's talk about",
+            "speaking of",
+            "on another note",
+            "changing topics",
+            "now let's",
+            "the next thing",
+            "another question",
+            "so tell me about",
         ]
 
         for marker in transition_markers:
@@ -209,7 +219,12 @@ class ChunkingService:
                 return True
 
         # Question markers (interviewer asking about new topic)
-        question_starters = ["what about", "how about", "can you tell", "what do you think"]
+        question_starters = [
+            "what about",
+            "how about",
+            "can you tell",
+            "what do you think",
+        ]
         for starter in question_starters:
             if next_text.startswith(starter):
                 return True
@@ -239,7 +254,9 @@ class ChunkingService:
         for utt in utterances:
             speaker = utt.get("speaker", "Unknown")
             word_count = len(utt.get("text", "").split())
-            speaker_word_counts[speaker] = speaker_word_counts.get(speaker, 0) + word_count
+            speaker_word_counts[speaker] = (
+                speaker_word_counts.get(speaker, 0) + word_count
+            )
 
         primary_speaker = max(speaker_word_counts, key=speaker_word_counts.get)
 
@@ -316,10 +333,7 @@ class ChunkingService:
 
         return text
 
-    def _get_overlap_utterances(
-        self,
-        utterances: list[dict]
-    ) -> list[dict]:
+    def _get_overlap_utterances(self, utterances: list[dict]) -> list[dict]:
         """Get utterances to include in overlap for next chunk."""
         if not utterances:
             return []
@@ -342,9 +356,11 @@ class ChunkingService:
         Reconstruct utterances from a chunk.
         Note: This loses some granularity but is used for merging.
         """
-        return [{
-            "speaker": chunk.primary_speaker,
-            "text": chunk.text,
-            "start_ms": chunk.start_ms,
-            "end_ms": chunk.end_ms,
-        }]
+        return [
+            {
+                "speaker": chunk.primary_speaker,
+                "text": chunk.text,
+                "start_ms": chunk.start_ms,
+                "end_ms": chunk.end_ms,
+            }
+        ]

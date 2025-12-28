@@ -66,6 +66,7 @@ async def _get_rate_limit_redis():
     if _redis_client is None and settings.REDIS_URL:
         try:
             import redis.asyncio as redis
+
             _redis_client = redis.from_url(
                 settings.REDIS_URL,
                 encoding="utf-8",

@@ -1,6 +1,7 @@
 """
 Job management CLI commands.
 """
+
 import asyncio
 from typing import Optional
 import typer
@@ -20,9 +21,15 @@ app = typer.Typer()
 
 @app.command("status")
 def jobs_status(
-    batch_id: Optional[str] = typer.Option(None, "--batch", "-b", help="Filter by batch ID"),
-    channel: Optional[str] = typer.Option(None, "--channel", "-c", help="Filter by channel"),
-    status_filter: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by status"),
+    batch_id: Optional[str] = typer.Option(
+        None, "--batch", "-b", help="Filter by batch ID"
+    ),
+    channel: Optional[str] = typer.Option(
+        None, "--channel", "-c", help="Filter by channel"
+    ),
+    status_filter: Optional[str] = typer.Option(
+        None, "--status", "-s", help="Filter by status"
+    ),
     limit: int = typer.Option(20, "--limit", "-l", help="Max jobs to show"),
 ):
     """Show job status."""
@@ -36,6 +43,7 @@ def jobs_status(
 
             if batch_id:
                 from uuid import UUID
+
                 query = query.where(Job.batch_id == UUID(batch_id))
 
             if channel:
@@ -101,9 +109,15 @@ def jobs_status(
 
 @app.command("retry")
 def retry_jobs(
-    batch_id: Optional[str] = typer.Option(None, "--batch", "-b", help="Retry all failed in batch"),
-    job_id: Optional[str] = typer.Option(None, "--job", "-j", help="Retry specific job"),
-    channel: Optional[str] = typer.Option(None, "--channel", "-c", help="Retry all failed in channel"),
+    batch_id: Optional[str] = typer.Option(
+        None, "--batch", "-b", help="Retry all failed in batch"
+    ),
+    job_id: Optional[str] = typer.Option(
+        None, "--job", "-j", help="Retry specific job"
+    ),
+    channel: Optional[str] = typer.Option(
+        None, "--channel", "-c", help="Retry all failed in channel"
+    ),
 ):
     """Retry failed jobs."""
     from uuid import UUID
@@ -122,7 +136,11 @@ def retry_jobs(
                 await db.execute(
                     update(Job)
                     .where(Job.id == UUID(job_id))
-                    .values(status="pending", error_message=None, retry_count=Job.retry_count + 1)
+                    .values(
+                        status="pending",
+                        error_message=None,
+                        retry_count=Job.retry_count + 1,
+                    )
                 )
                 await db.commit()
                 console.print(f"[green]Queued job {job_id} for retry[/green]")
@@ -132,10 +150,16 @@ def retry_jobs(
                 result = await db.execute(
                     update(Job)
                     .where(Job.batch_id == UUID(batch_id), Job.status == "failed")
-                    .values(status="pending", error_message=None, retry_count=Job.retry_count + 1)
+                    .values(
+                        status="pending",
+                        error_message=None,
+                        retry_count=Job.retry_count + 1,
+                    )
                 )
                 await db.commit()
-                console.print(f"[green]Queued {result.rowcount} failed jobs for retry[/green]")
+                console.print(
+                    f"[green]Queued {result.rowcount} failed jobs for retry[/green]"
+                )
 
             elif channel:
                 ch = await get_channel_by_name_or_id(channel)
@@ -148,19 +172,31 @@ def retry_jobs(
                 )
                 result = await db.execute(
                     update(Job)
-                    .where(Job.episode_id.in_(list(episode_ids)), Job.status == "failed")
-                    .values(status="pending", error_message=None, retry_count=Job.retry_count + 1)
+                    .where(
+                        Job.episode_id.in_(list(episode_ids)), Job.status == "failed"
+                    )
+                    .values(
+                        status="pending",
+                        error_message=None,
+                        retry_count=Job.retry_count + 1,
+                    )
                 )
                 await db.commit()
-                console.print(f"[green]Queued {result.rowcount} failed jobs for retry[/green]")
+                console.print(
+                    f"[green]Queued {result.rowcount} failed jobs for retry[/green]"
+                )
 
     asyncio.run(_retry())
 
 
 @app.command("errors")
 def show_errors(
-    batch_id: Optional[str] = typer.Option(None, "--batch", "-b", help="Filter by batch"),
-    channel: Optional[str] = typer.Option(None, "--channel", "-c", help="Filter by channel"),
+    batch_id: Optional[str] = typer.Option(
+        None, "--batch", "-b", help="Filter by batch"
+    ),
+    channel: Optional[str] = typer.Option(
+        None, "--channel", "-c", help="Filter by channel"
+    ),
     limit: int = typer.Option(20, "--limit", "-l", help="Max errors to show"),
 ):
     """Show failed jobs with error messages."""
@@ -180,6 +216,7 @@ def show_errors(
 
             if batch_id:
                 from uuid import UUID
+
                 query = query.where(Job.batch_id == UUID(batch_id))
 
             if channel:
@@ -201,8 +238,16 @@ def show_errors(
 
             for job, episode in rows:
                 table.add_row(
-                    episode.title[:37] + "..." if len(episode.title) > 40 else episode.title,
-                    (job.error_message or "Unknown")[:57] + "..." if len(job.error_message or "") > 60 else (job.error_message or "Unknown"),
+                    (
+                        episode.title[:37] + "..."
+                        if len(episode.title) > 40
+                        else episode.title
+                    ),
+                    (
+                        (job.error_message or "Unknown")[:57] + "..."
+                        if len(job.error_message or "") > 60
+                        else (job.error_message or "Unknown")
+                    ),
                     str(job.retry_count),
                 )
 
@@ -236,7 +281,9 @@ def find_missing(
             episodes = result.scalars().all()
 
             if not episodes:
-                console.print(f"[green]All episodes in '{ch.name}' are transcribed![/green]")
+                console.print(
+                    f"[green]All episodes in '{ch.name}' are transcribed![/green]"
+                )
                 return
 
             table = Table(title=f"Missing Transcriptions ({len(episodes)} episodes)")

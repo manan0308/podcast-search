@@ -10,7 +10,9 @@ class Chunk(Base):
     __tablename__ = "chunks"
 
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
-    episode_id = Column(GUID(), ForeignKey("episodes.id", ondelete="CASCADE"), nullable=False)
+    episode_id = Column(
+        GUID(), ForeignKey("episodes.id", ondelete="CASCADE"), nullable=False
+    )
 
     # Link to vector store
     qdrant_point_id = Column(GUID(), nullable=False, index=True)

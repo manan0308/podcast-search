@@ -116,21 +116,21 @@ class SpeakerLabelingService:
                         guest_mapping[raw_speaker] = f"{default_label} {guest_counter}"
                 speaker_name = guest_mapping[raw_speaker]
 
-            result.append({
-                "speaker": speaker_name,
-                "speaker_raw": raw_speaker,
-                "text": utt.text,
-                "start_ms": utt.start_ms,
-                "end_ms": utt.end_ms,
-                "confidence": utt.confidence,
-            })
+            result.append(
+                {
+                    "speaker": speaker_name,
+                    "speaker_raw": raw_speaker,
+                    "text": utt.text,
+                    "start_ms": utt.start_ms,
+                    "end_ms": utt.end_ms,
+                    "confidence": utt.confidence,
+                }
+            )
 
         return result
 
     def _get_representative_sample(
-        self,
-        utterances: list[Utterance],
-        sample_size: int
+        self, utterances: list[Utterance], sample_size: int
     ) -> list[Utterance]:
         """Get a representative sample of utterances from different parts of the episode."""
         if len(utterances) <= sample_size:
@@ -140,7 +140,7 @@ class SpeakerLabelingService:
         section_size = sample_size // 3
         beginning = utterances[:section_size]
         middle_start = len(utterances) // 2 - section_size // 2
-        middle = utterances[middle_start:middle_start + section_size]
+        middle = utterances[middle_start : middle_start + section_size]
         end = utterances[-section_size:]
 
         return beginning + middle + end
@@ -154,10 +154,12 @@ class SpeakerLabelingService:
     ) -> str:
         """Build the Claude prompt for speaker identification."""
         # Format sample utterances
-        sample_text = "\n".join([
-            f"[{u.speaker}]: {u.text[:200]}{'...' if len(u.text) > 200 else ''}"
-            for u in sample
-        ])
+        sample_text = "\n".join(
+            [
+                f"[{u.speaker}]: {u.text[:200]}{'...' if len(u.text) > 200 else ''}"
+                for u in sample
+            ]
+        )
 
         # Build speaker descriptions if we know them
         speaker_hints = ""

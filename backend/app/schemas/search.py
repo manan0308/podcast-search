@@ -20,24 +20,16 @@ class SearchRequest(BaseModel):
 
     # Hybrid search options
     use_hybrid: bool = Field(
-        default=True,
-        description="Use hybrid search (semantic + keyword BM25)"
+        default=True, description="Use hybrid search (semantic + keyword BM25)"
     )
     use_reranking: bool = Field(
-        default=True,
-        description="Re-rank results with cross-encoder"
+        default=True, description="Re-rank results with cross-encoder"
     )
     semantic_weight: float = Field(
-        default=0.7,
-        ge=0.0,
-        le=1.0,
-        description="Weight for semantic search (0-1)"
+        default=0.7, ge=0.0, le=1.0, description="Weight for semantic search (0-1)"
     )
     keyword_weight: float = Field(
-        default=0.3,
-        ge=0.0,
-        le=1.0,
-        description="Weight for keyword/BM25 search (0-1)"
+        default=0.3, ge=0.0, le=1.0, description="Weight for keyword/BM25 search (0-1)"
     )
 
 

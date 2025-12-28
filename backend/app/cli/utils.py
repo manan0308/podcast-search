@@ -1,6 +1,7 @@
 """
 Utility CLI commands.
 """
+
 import asyncio
 from pathlib import Path
 from typing import Optional
@@ -21,9 +22,15 @@ app = typer.Typer()
 
 @app.command("cleanup-audio")
 def cleanup_audio(
-    channel: Optional[str] = typer.Option(None, "--channel", "-c", help="Cleanup specific channel"),
-    all_files: bool = typer.Option(False, "--all", "-a", help="Cleanup all audio files"),
-    dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Show what would be deleted"),
+    channel: Optional[str] = typer.Option(
+        None, "--channel", "-c", help="Cleanup specific channel"
+    ),
+    all_files: bool = typer.Option(
+        False, "--all", "-a", help="Cleanup all audio files"
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", "-n", help="Show what would be deleted"
+    ),
 ):
     """Clean up downloaded audio files."""
     audio_dir = Path(settings.AUDIO_DIR)
@@ -32,7 +39,11 @@ def cleanup_audio(
         console.print("[yellow]Audio directory not found.[/yellow]")
         return
 
-    files = list(audio_dir.glob("*.mp3")) + list(audio_dir.glob("*.m4a")) + list(audio_dir.glob("*.webm"))
+    files = (
+        list(audio_dir.glob("*.mp3"))
+        + list(audio_dir.glob("*.m4a"))
+        + list(audio_dir.glob("*.webm"))
+    )
 
     if not files:
         console.print("[green]No audio files to clean up.[/green]")
@@ -67,8 +78,12 @@ def cleanup_audio(
 
 @app.command("cleanup-transcripts")
 def cleanup_transcripts(
-    channel: Optional[str] = typer.Option(None, "--channel", "-c", help="Cleanup specific channel"),
-    duplicates_only: bool = typer.Option(False, "--duplicates", "-d", help="Only remove duplicates"),
+    channel: Optional[str] = typer.Option(
+        None, "--channel", "-c", help="Cleanup specific channel"
+    ),
+    duplicates_only: bool = typer.Option(
+        False, "--duplicates", "-d", help="Only remove duplicates"
+    ),
 ):
     """Clean up transcript backup files."""
     transcripts_dir = Path(settings.TRANSCRIPTS_DIR)
@@ -88,6 +103,7 @@ def cleanup_transcripts(
     if duplicates_only:
         # Find duplicates by youtube_id
         import json
+
         youtube_ids = {}
         duplicates = []
 
@@ -105,7 +121,9 @@ def cleanup_transcripts(
                 pass
 
         if duplicates:
-            console.print(f"[yellow]Found {len(duplicates)} duplicate transcripts[/yellow]")
+            console.print(
+                f"[yellow]Found {len(duplicates)} duplicate transcripts[/yellow]"
+            )
             if Confirm.ask("Delete duplicates?"):
                 for f in duplicates:
                     f.unlink()
@@ -116,7 +134,9 @@ def cleanup_transcripts(
 
 @app.command("verify-transcripts")
 def verify_transcripts(
-    channel: Optional[str] = typer.Option(None, "--channel", "-c", help="Verify specific channel"),
+    channel: Optional[str] = typer.Option(
+        None, "--channel", "-c", help="Verify specific channel"
+    ),
 ):
     """Verify transcript integrity."""
     from sqlalchemy import select
@@ -155,7 +175,9 @@ def verify_transcripts(
                 if len(issues) > 20:
                     console.print(f"  ... and {len(issues) - 20} more")
             else:
-                console.print(f"[green]All {len(episodes)} transcripts verified![/green]")
+                console.print(
+                    f"[green]All {len(episodes)} transcripts verified![/green]"
+                )
 
     asyncio.run(_verify())
 
@@ -188,9 +210,14 @@ def show_stats():
             job_status = dict(job_result.all())
 
             # Total duration
-            total_duration = await db.scalar(
-                select(func.sum(Episode.duration_seconds)).where(Episode.status == "done")
-            ) or 0
+            total_duration = (
+                await db.scalar(
+                    select(func.sum(Episode.duration_seconds)).where(
+                        Episode.status == "done"
+                    )
+                )
+                or 0
+            )
 
             # Cost
             total_cost = await db.scalar(select(func.sum(Job.cost_cents))) or 0
@@ -217,7 +244,11 @@ def show_stats():
         ep_table.add_column("Count", justify="right")
 
         for status, count in sorted(episode_status.items()):
-            color = "green" if status == "done" else "yellow" if status == "pending" else "red"
+            color = (
+                "green"
+                if status == "done"
+                else "yellow" if status == "pending" else "red"
+            )
             ep_table.add_row(f"[{color}]{status}[/{color}]", str(count))
 
         console.print(ep_table)
@@ -229,7 +260,15 @@ def show_stats():
             job_table.add_column("Count", justify="right")
 
             for status, count in sorted(job_status.items()):
-                color = "green" if status == "done" else "yellow" if status == "pending" else "red" if status == "failed" else "blue"
+                color = (
+                    "green"
+                    if status == "done"
+                    else (
+                        "yellow"
+                        if status == "pending"
+                        else "red" if status == "failed" else "blue"
+                    )
+                )
                 job_table.add_row(f"[{color}]{status}[/{color}]", str(count))
 
             console.print(job_table)
@@ -240,7 +279,9 @@ def show_stats():
 @app.command("export-errors")
 def export_errors(
     output: str = typer.Argument("errors.csv", help="Output file path"),
-    batch_id: Optional[str] = typer.Option(None, "--batch", "-b", help="Filter by batch"),
+    batch_id: Optional[str] = typer.Option(
+        None, "--batch", "-b", help="Filter by batch"
+    ),
 ):
     """Export failed jobs to CSV."""
     from sqlalchemy import select
@@ -249,14 +290,11 @@ def export_errors(
 
     async def _export():
         async with AsyncSessionLocal() as db:
-            query = (
-                select(Job, Episode)
-                .join(Episode)
-                .where(Job.status == "failed")
-            )
+            query = select(Job, Episode).join(Episode).where(Job.status == "failed")
 
             if batch_id:
                 from uuid import UUID
+
                 query = query.where(Job.batch_id == UUID(batch_id))
 
             result = await db.execute(query)
@@ -267,19 +305,31 @@ def export_errors(
                 return
 
             import csv
+
             with open(output, "w", newline="") as f:
                 writer = csv.writer(f)
-                writer.writerow(["job_id", "episode_id", "youtube_id", "title", "error_message", "retry_count"])
+                writer.writerow(
+                    [
+                        "job_id",
+                        "episode_id",
+                        "youtube_id",
+                        "title",
+                        "error_message",
+                        "retry_count",
+                    ]
+                )
 
                 for job, episode in rows:
-                    writer.writerow([
-                        str(job.id),
-                        str(episode.id),
-                        episode.youtube_id,
-                        episode.title,
-                        job.error_message or "",
-                        job.retry_count,
-                    ])
+                    writer.writerow(
+                        [
+                            str(job.id),
+                            str(episode.id),
+                            episode.youtube_id,
+                            episode.title,
+                            job.error_message or "",
+                            job.retry_count,
+                        ]
+                    )
 
             console.print(f"[green]Exported {len(rows)} errors to {output}[/green]")
 
@@ -288,7 +338,9 @@ def export_errors(
 
 @app.command("reindex")
 def reindex_vectors(
-    channel: Optional[str] = typer.Option(None, "--channel", "-c", help="Reindex specific channel"),
+    channel: Optional[str] = typer.Option(
+        None, "--channel", "-c", help="Reindex specific channel"
+    ),
     force: bool = typer.Option(False, "--force", "-f", help="Force reindex all"),
 ):
     """Rebuild vector index for search."""

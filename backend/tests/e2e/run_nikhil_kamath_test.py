@@ -25,6 +25,7 @@ sys.path.insert(0, backend_path)
 
 # Load .env BEFORE importing app modules (critical for pydantic-settings)
 from dotenv import load_dotenv
+
 env_path = Path(backend_path) / ".env"
 load_dotenv(env_path, override=True)
 
@@ -38,13 +39,18 @@ os.environ.setdefault("TRANSCRIPTS_DIR", tempfile.mkdtemp())
 
 # Clear settings cache to force reload with new env vars
 from app.config import get_settings
+
 get_settings.cache_clear()
 
 from loguru import logger
 
 # Configure logging
 logger.remove()
-logger.add(sys.stderr, level="INFO", format="<green>{time:HH:mm:ss}</green> | <level>{level}</level> | {message}")
+logger.add(
+    sys.stderr,
+    level="INFO",
+    format="<green>{time:HH:mm:ss}</green> | <level>{level}</level> | {message}",
+)
 
 
 async def test_youtube_fetch():
@@ -119,7 +125,11 @@ async def test_transcription(audio_files, provider_name: str = None):
     if not provider_name:
         available = get_available_providers()
         for p in available:
-            if p["available"] and p["name"] in ("assemblyai", "deepgram", "faster-whisper"):
+            if p["available"] and p["name"] in (
+                "assemblyai",
+                "deepgram",
+                "faster-whisper",
+            ):
                 provider_name = p["name"]
                 break
         if not provider_name:
@@ -149,8 +159,12 @@ async def test_transcription(audio_files, provider_name: str = None):
                 utterance_count = len(result.utterances or [])
                 # Handle both dict and Utterance object types
                 word_count = 0
-                for u in (result.utterances or []):
-                    text = u.get("text", "") if isinstance(u, dict) else getattr(u, "text", "")
+                for u in result.utterances or []:
+                    text = (
+                        u.get("text", "")
+                        if isinstance(u, dict)
+                        else getattr(u, "text", "")
+                    )
                     word_count += len(text.split())
                 logger.info(f"✓ Transcribed in {elapsed}s")
                 logger.info(f"  Utterances: {utterance_count}")
@@ -163,6 +177,7 @@ async def test_transcription(audio_files, provider_name: str = None):
         except Exception as e:
             logger.error(f"✗ Transcription error: {e}")
             import traceback
+
             traceback.print_exc()
 
     return transcripts
@@ -204,12 +219,15 @@ async def test_speaker_labeling(transcripts):
             if labeled:
                 logger.info("  Sample utterances:")
                 for u in labeled[:3]:
-                    text_preview = u["text"][:80] + "..." if len(u["text"]) > 80 else u["text"]
+                    text_preview = (
+                        u["text"][:80] + "..." if len(u["text"]) > 80 else u["text"]
+                    )
                     logger.info(f"    {u['speaker']}: {text_preview}")
 
         except Exception as e:
             logger.error(f"✗ Labeling error: {e}")
             import traceback
+
             traceback.print_exc()
 
     return labeled_transcripts
@@ -233,7 +251,7 @@ async def test_chunking(labeled_transcripts, channel_name: str = "Nikhil Kamath"
         episode_context = EpisodeContext(
             episode_title=ep.title,
             channel_name=channel_name,
-            published_at=getattr(ep, 'published_at', None),
+            published_at=getattr(ep, "published_at", None),
         )
 
         chunks = chunker.chunk_transcript(
@@ -245,7 +263,9 @@ async def test_chunking(labeled_transcripts, channel_name: str = "Nikhil Kamath"
 
         logger.info(f"✓ Created {len(chunks)} chunks")
         if chunks:
-            logger.info(f"  Avg words per chunk: {sum(c.word_count for c in chunks) // len(chunks)}")
+            logger.info(
+                f"  Avg words per chunk: {sum(c.word_count for c in chunks) // len(chunks)}"
+            )
             # Show sample enriched text
             sample = chunks[0]
             logger.info(f"  Sample enriched header:")
@@ -365,6 +385,7 @@ async def main():
     except Exception as e:
         logger.error(f"\n✗ TEST FAILED: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 

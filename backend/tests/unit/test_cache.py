@@ -1,4 +1,5 @@
 """Unit tests for cache service."""
+
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 import json
@@ -14,8 +15,10 @@ class TestCacheService:
         """Cache get should return None on Redis error."""
         service = CacheService()
 
-        with patch.object(service, '_get_redis', new_callable=AsyncMock) as mock_redis:
-            mock_redis.return_value.get = AsyncMock(side_effect=Exception("Redis error"))
+        with patch.object(service, "_get_redis", new_callable=AsyncMock) as mock_redis:
+            mock_redis.return_value.get = AsyncMock(
+                side_effect=Exception("Redis error")
+            )
 
             result = await service.get("test_key")
 
@@ -26,8 +29,10 @@ class TestCacheService:
         """Cache set should return False on Redis error."""
         service = CacheService()
 
-        with patch.object(service, '_get_redis', new_callable=AsyncMock) as mock_redis:
-            mock_redis.return_value.setex = AsyncMock(side_effect=Exception("Redis error"))
+        with patch.object(service, "_get_redis", new_callable=AsyncMock) as mock_redis:
+            mock_redis.return_value.setex = AsyncMock(
+                side_effect=Exception("Redis error")
+            )
 
             result = await service.set("key", "value", ttl=60)
 
@@ -38,7 +43,7 @@ class TestCacheService:
         """get_json should parse JSON correctly."""
         service = CacheService()
 
-        with patch.object(service, 'get', new_callable=AsyncMock) as mock_get:
+        with patch.object(service, "get", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = '{"key": "value", "num": 42}'
 
             result = await service.get_json("test_key")
@@ -50,7 +55,7 @@ class TestCacheService:
         """get_json should return None for invalid JSON."""
         service = CacheService()
 
-        with patch.object(service, 'get', new_callable=AsyncMock) as mock_get:
+        with patch.object(service, "get", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = "not valid json{"
 
             result = await service.get_json("test_key")

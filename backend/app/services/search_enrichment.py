@@ -3,6 +3,7 @@ Shared search result enrichment service.
 
 Fixes N+1 query problems by batch-loading episodes and channels.
 """
+
 from uuid import UUID
 from typing import Optional
 from sqlalchemy import select

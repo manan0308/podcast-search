@@ -1,4 +1,5 @@
 """Request ID middleware for tracking requests across services."""
+
 import uuid
 from contextvars import ContextVar
 from starlette.middleware.base import BaseHTTPMiddleware

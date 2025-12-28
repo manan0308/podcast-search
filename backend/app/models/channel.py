@@ -31,7 +31,9 @@ class Channel(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    episodes = relationship("Episode", back_populates="channel", cascade="all, delete-orphan")
+    episodes = relationship(
+        "Episode", back_populates="channel", cascade="all, delete-orphan"
+    )
     batches = relationship("Batch", back_populates="channel")
 
     def __repr__(self):

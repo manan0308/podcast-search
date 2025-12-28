@@ -1,4 +1,5 @@
 """Celery application configuration."""
+
 from celery import Celery
 from app.config import settings
 
@@ -22,27 +23,21 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
-
     # Task execution
     task_acks_late=True,  # Acknowledge after task completes
     task_reject_on_worker_lost=True,  # Requeue if worker dies
     task_time_limit=3600,  # 1 hour hard limit
     task_soft_time_limit=3000,  # 50 min soft limit
-
     # Worker settings
     worker_prefetch_multiplier=1,  # One task at a time per worker
     worker_max_tasks_per_child=50,  # Restart worker after 50 tasks (prevent memory leaks)
-
     # Result backend
     result_expires=86400,  # Results expire after 24 hours
-
     # Rate limiting
     task_default_rate_limit="100/m",
-
     # Retry settings
     task_default_retry_delay=60,  # 1 minute
     task_max_retries=3,
-
     # Beat schedule for periodic tasks
     beat_schedule={
         "cleanup-old-audio-files": {

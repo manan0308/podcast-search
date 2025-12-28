@@ -175,7 +175,8 @@ Sources:
         context_parts = []
 
         for i, result in enumerate(search_results, 1):
-            context_parts.append(f"""
+            context_parts.append(
+                f"""
 [Source {i}]
 Episode: {result.episode_title}
 Speaker: {result.speaker or "Unknown"}
@@ -184,7 +185,8 @@ Timestamp: {result.timestamp}
 ---
 {result.text}
 ---
-""")
+"""
+            )
 
         return "\n".join(context_parts)
 
@@ -199,10 +201,12 @@ Timestamp: {result.timestamp}
 
         # Add conversation history
         for msg in conversation_history[-10:]:  # Keep last 10 messages
-            messages.append({
-                "role": msg.get("role", "user"),
-                "content": msg.get("content", ""),
-            })
+            messages.append(
+                {
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", ""),
+                }
+            )
 
         # Add current message with context
         user_message = f"""Based on the following podcast transcript excerpts, please answer my question.
@@ -215,10 +219,12 @@ QUESTION:
 
 Remember to cite the specific episode and speaker when referencing information from the transcripts."""
 
-        messages.append({
-            "role": "user",
-            "content": user_message,
-        })
+        messages.append(
+            {
+                "role": "user",
+                "content": user_message,
+            }
+        )
 
         return messages
 
@@ -227,17 +233,23 @@ Remember to cite the specific episode and speaker when referencing information f
         citations = []
 
         for result in search_results:
-            citations.append(Citation(
-                episode_id=result.episode_id,
-                episode_title=result.episode_title,
-                episode_url=result.episode_url,
-                channel_name=result.channel_name,
-                channel_slug=result.channel_slug,
-                speaker=result.speaker,
-                text=result.text[:500] + "..." if len(result.text) > 500 else result.text,
-                timestamp=result.timestamp,
-                timestamp_ms=result.timestamp_ms,
-                published_at=result.published_at,
-            ))
+            citations.append(
+                Citation(
+                    episode_id=result.episode_id,
+                    episode_title=result.episode_title,
+                    episode_url=result.episode_url,
+                    channel_name=result.channel_name,
+                    channel_slug=result.channel_slug,
+                    speaker=result.speaker,
+                    text=(
+                        result.text[:500] + "..."
+                        if len(result.text) > 500
+                        else result.text
+                    ),
+                    timestamp=result.timestamp,
+                    timestamp_ms=result.timestamp_ms,
+                    published_at=result.published_at,
+                )
+            )
 
         return citations

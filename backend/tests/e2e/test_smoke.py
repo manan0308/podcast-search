@@ -15,6 +15,7 @@ Requirements:
     - Valid API keys in environment
     - Internet connection
 """
+
 import os
 import asyncio
 import pytest
@@ -34,7 +35,7 @@ pytestmark = [
     pytest.mark.smoke,
     pytest.mark.skipif(
         os.environ.get("RUN_E2E_TESTS") != "true",
-        reason="E2E tests disabled. Set RUN_E2E_TESTS=true to enable."
+        reason="E2E tests disabled. Set RUN_E2E_TESTS=true to enable.",
     ),
 ]
 
@@ -108,7 +109,9 @@ class TestYouTubeIntegration:
     """Test YouTube fetching functionality."""
 
     @pytest.mark.asyncio
-    async def test_fetch_channel_preview(self, async_client, admin_headers, test_channel_url):
+    async def test_fetch_channel_preview(
+        self, async_client, admin_headers, test_channel_url
+    ):
         """Should fetch channel info from YouTube."""
         response = await async_client.post(
             "/api/channels/fetch",
@@ -125,7 +128,9 @@ class TestYouTubeIntegration:
         assert "episodes" in data
         assert data["total_episodes"] > 0
 
-        print(f"\n✓ Found channel: {data['name']} with {data['total_episodes']} episodes")
+        print(
+            f"\n✓ Found channel: {data['name']} with {data['total_episodes']} episodes"
+        )
 
 
 class TestFullPipeline:
@@ -170,7 +175,9 @@ class TestFullPipeline:
             pytest.fail(f"Failed to create test channel: {response.text}")
 
     @pytest.fixture(scope="class")
-    async def created_episode(self, async_client, admin_headers, created_channel, test_video_id):
+    async def created_episode(
+        self, async_client, admin_headers, created_channel, test_video_id
+    ):
         """Create a test episode."""
         response = await async_client.post(
             "/api/episodes",
@@ -251,7 +258,9 @@ class TestFullPipeline:
             assert status_response.status_code == 200
             status = status_response.json()
 
-            print(f"  Status: {status['status']}, Progress: {status.get('progress_percent', 0):.0f}%")
+            print(
+                f"  Status: {status['status']}, Progress: {status.get('progress_percent', 0):.0f}%"
+            )
 
             if status["status"] == "completed":
                 print(f"✓ Batch completed in {waited}s")
@@ -295,7 +304,9 @@ class TestSearchAfterTranscription:
         assert response.status_code == 200
         data = response.json()
 
-        print(f"\n🔍 Semantic search found {data['total']} results in {data['processing_time_ms']}ms")
+        print(
+            f"\n🔍 Semantic search found {data['total']} results in {data['processing_time_ms']}ms"
+        )
 
     @pytest.mark.asyncio
     async def test_hybrid_search(self, async_client):
@@ -313,7 +324,9 @@ class TestSearchAfterTranscription:
         assert response.status_code == 200
         data = response.json()
 
-        print(f"🔍 Hybrid search found {data['total']} results in {data['processing_time_ms']}ms")
+        print(
+            f"🔍 Hybrid search found {data['total']} results in {data['processing_time_ms']}ms"
+        )
 
     @pytest.mark.asyncio
     async def test_search_with_filters(self, async_client):
@@ -431,7 +444,9 @@ if __name__ == "__main__":
     # Run pytest
     result = subprocess.run(
         [
-            sys.executable, "-m", "pytest",
+            sys.executable,
+            "-m",
+            "pytest",
             __file__,
             "-v",
             "--tb=short",

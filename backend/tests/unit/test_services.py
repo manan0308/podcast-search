@@ -3,6 +3,7 @@ Unit tests for service modules.
 
 Tests service logic with mocked external dependencies.
 """
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -46,8 +47,18 @@ class TestChunkingService:
         service = ChunkingService(target_chunk_size=20, min_chunk_size=5)
         utterances = [
             {"speaker": "Host", "text": "Word " * 15, "start_ms": 0, "end_ms": 5000},
-            {"speaker": "Guest", "text": "Word " * 15, "start_ms": 5000, "end_ms": 10000},
-            {"speaker": "Host", "text": "Word " * 15, "start_ms": 10000, "end_ms": 15000},
+            {
+                "speaker": "Guest",
+                "text": "Word " * 15,
+                "start_ms": 5000,
+                "end_ms": 10000,
+            },
+            {
+                "speaker": "Host",
+                "text": "Word " * 15,
+                "start_ms": 10000,
+                "end_ms": 15000,
+            },
         ]
         chunks = service.chunk_transcript(utterances, "ep-1")
 
@@ -63,9 +74,24 @@ class TestChunkingService:
 
         service = ChunkingService(target_chunk_size=100, min_chunk_size=10)
         utterances = [
-            {"speaker": "Host", "text": "Hello everyone.", "start_ms": 0, "end_ms": 2000},
-            {"speaker": "Guest1", "text": "Thanks for having me.", "start_ms": 2000, "end_ms": 4000},
-            {"speaker": "Guest2", "text": "Great to be here.", "start_ms": 4000, "end_ms": 6000},
+            {
+                "speaker": "Host",
+                "text": "Hello everyone.",
+                "start_ms": 0,
+                "end_ms": 2000,
+            },
+            {
+                "speaker": "Guest1",
+                "text": "Thanks for having me.",
+                "start_ms": 2000,
+                "end_ms": 4000,
+            },
+            {
+                "speaker": "Guest2",
+                "text": "Great to be here.",
+                "start_ms": 4000,
+                "end_ms": 6000,
+            },
         ]
         chunks = service.chunk_transcript(utterances, "ep-1")
 
@@ -88,7 +114,12 @@ class TestChunkingService:
             published_at=datetime(2024, 6, 15),
         )
         utterances = [
-            {"speaker": "Host", "text": "Let's discuss AI trends.", "start_ms": 0, "end_ms": 3000},
+            {
+                "speaker": "Host",
+                "text": "Let's discuss AI trends.",
+                "start_ms": 0,
+                "end_ms": 3000,
+            },
         ]
         chunks = service.chunk_transcript(utterances, "ep-1", episode_context=context)
 
@@ -103,8 +134,15 @@ class TestChunkingService:
         from app.services.chunking import ChunkingService
 
         service = ChunkingService()
-        current = [{"speaker": "Host", "text": "Question here?", "start_ms": 0, "end_ms": 2000}]
-        next_utt = {"speaker": "Guest", "text": "Answer here.", "start_ms": 2000, "end_ms": 4000}
+        current = [
+            {"speaker": "Host", "text": "Question here?", "start_ms": 0, "end_ms": 2000}
+        ]
+        next_utt = {
+            "speaker": "Guest",
+            "text": "Answer here.",
+            "start_ms": 2000,
+            "end_ms": 4000,
+        }
 
         assert service._is_good_break_point(current, next_utt) is True
 
@@ -113,9 +151,16 @@ class TestChunkingService:
         from app.services.chunking import ChunkingService
 
         service = ChunkingService()
-        current = [{"speaker": "Host", "text": "First thought.", "start_ms": 0, "end_ms": 2000}]
+        current = [
+            {"speaker": "Host", "text": "First thought.", "start_ms": 0, "end_ms": 2000}
+        ]
         # 3 second pause
-        next_utt = {"speaker": "Host", "text": "New topic.", "start_ms": 5000, "end_ms": 7000}
+        next_utt = {
+            "speaker": "Host",
+            "text": "New topic.",
+            "start_ms": 5000,
+            "end_ms": 7000,
+        }
 
         assert service._is_good_break_point(current, next_utt) is True
 
@@ -124,8 +169,20 @@ class TestChunkingService:
         from app.services.chunking import ChunkingService
 
         service = ChunkingService()
-        current = [{"speaker": "Host", "text": "That's interesting.", "start_ms": 0, "end_ms": 2000}]
-        next_utt = {"speaker": "Host", "text": "Moving on, let's talk about something else.", "start_ms": 2000, "end_ms": 5000}
+        current = [
+            {
+                "speaker": "Host",
+                "text": "That's interesting.",
+                "start_ms": 0,
+                "end_ms": 2000,
+            }
+        ]
+        next_utt = {
+            "speaker": "Host",
+            "text": "Moving on, let's talk about something else.",
+            "start_ms": 2000,
+            "end_ms": 5000,
+        }
 
         assert service._detect_topic_shift(current, next_utt) is True
 
@@ -136,8 +193,18 @@ class TestChunkingService:
         service = ChunkingService(chunk_overlap=10)
         utterances = [
             {"speaker": "A", "text": "One two three.", "start_ms": 0, "end_ms": 1000},
-            {"speaker": "B", "text": "Four five six.", "start_ms": 1000, "end_ms": 2000},
-            {"speaker": "A", "text": "Seven eight nine ten.", "start_ms": 2000, "end_ms": 3000},
+            {
+                "speaker": "B",
+                "text": "Four five six.",
+                "start_ms": 1000,
+                "end_ms": 2000,
+            },
+            {
+                "speaker": "A",
+                "text": "Seven eight nine ten.",
+                "start_ms": 2000,
+                "end_ms": 3000,
+            },
         ]
         overlap = service._get_overlap_utterances(utterances)
 
@@ -155,12 +222,14 @@ class TestSpeakerLabelingService:
         from app.services.speaker_labeling import SpeakerLabelingService
         from app.services.transcription.base import Utterance
 
-        with patch('app.services.speaker_labeling.anthropic'):
+        with patch("app.services.speaker_labeling.anthropic"):
             service = SpeakerLabelingService()
 
         utterances = [
             Utterance(speaker="SPEAKER_00", text="Hello", start_ms=0, end_ms=1000),
-            Utterance(speaker="SPEAKER_01", text="Hi there", start_ms=1000, end_ms=2000),
+            Utterance(
+                speaker="SPEAKER_01", text="Hi there", start_ms=1000, end_ms=2000
+            ),
         ]
         mapping = {"SPEAKER_00": "Sam", "SPEAKER_01": "Guest"}
 
@@ -176,7 +245,7 @@ class TestSpeakerLabelingService:
         from app.services.speaker_labeling import SpeakerLabelingService
         from app.services.transcription.base import Utterance
 
-        with patch('app.services.speaker_labeling.anthropic'):
+        with patch("app.services.speaker_labeling.anthropic"):
             service = SpeakerLabelingService()
 
         utterances = [
@@ -195,7 +264,7 @@ class TestSpeakerLabelingService:
         """Should return empty mapping for empty utterances."""
         from app.services.speaker_labeling import SpeakerLabelingService
 
-        with patch('app.services.speaker_labeling.anthropic'):
+        with patch("app.services.speaker_labeling.anthropic"):
             service = SpeakerLabelingService()
 
         mapping = await service.identify_speakers(
@@ -214,7 +283,7 @@ class TestEmbeddingService:
         """Should embed single query text."""
         from app.services.embedding import EmbeddingService
 
-        with patch('app.services.embedding.openai.AsyncOpenAI') as MockAsyncOpenAI:
+        with patch("app.services.embedding.openai.AsyncOpenAI") as MockAsyncOpenAI:
             mock_client = AsyncMock()
             mock_response = MagicMock()
             mock_response.data = [MagicMock(embedding=[0.1] * 1536)]
@@ -232,7 +301,7 @@ class TestEmbeddingService:
         """Should batch multiple texts for embedding."""
         from app.services.embedding import EmbeddingService
 
-        with patch('app.services.embedding.openai.AsyncOpenAI') as MockAsyncOpenAI:
+        with patch("app.services.embedding.openai.AsyncOpenAI") as MockAsyncOpenAI:
             mock_client = AsyncMock()
             # Mock embedding items with index for proper ordering
             mock_embedding1 = MagicMock()
@@ -257,7 +326,7 @@ class TestEmbeddingService:
         """Should return empty list for empty input."""
         from app.services.embedding import EmbeddingService
 
-        with patch('app.services.embedding.openai.AsyncOpenAI'):
+        with patch("app.services.embedding.openai.AsyncOpenAI"):
             service = EmbeddingService()
             embeddings = await service.embed_texts([])
             assert embeddings == []
@@ -271,7 +340,7 @@ class TestVectorStoreService:
         """Should return search results from Qdrant."""
         from app.services.vector_store import VectorStoreService
 
-        with patch('app.services.vector_store.QdrantClient') as MockQdrant:
+        with patch("app.services.vector_store.QdrantClient") as MockQdrant:
             mock_client = MagicMock()
             mock_client.search.return_value = [
                 MagicMock(
@@ -285,7 +354,7 @@ class TestVectorStoreService:
                         "speakers": ["Host"],
                         "start_ms": 0,
                         "end_ms": 5000,
-                    }
+                    },
                 )
             ]
             MockQdrant.return_value = mock_client
@@ -305,7 +374,7 @@ class TestVectorStoreService:
         """Should apply filters to search."""
         from app.services.vector_store import VectorStoreService
 
-        with patch('app.services.vector_store.QdrantClient') as MockQdrant:
+        with patch("app.services.vector_store.QdrantClient") as MockQdrant:
             mock_client = MagicMock()
             mock_client.search.return_value = []
             MockQdrant.return_value = mock_client
@@ -328,7 +397,7 @@ class TestVectorStoreService:
         """Should upsert chunks to Qdrant."""
         from app.services.vector_store import VectorStoreService
 
-        with patch('app.services.vector_store.QdrantClient') as MockQdrant:
+        with patch("app.services.vector_store.QdrantClient") as MockQdrant:
             mock_client = MagicMock()
             MockQdrant.return_value = mock_client
 
@@ -357,7 +426,7 @@ class TestVectorStoreService:
         """Should delete all chunks for an episode."""
         from app.services.vector_store import VectorStoreService
 
-        with patch('app.services.vector_store.QdrantClient') as MockQdrant:
+        with patch("app.services.vector_store.QdrantClient") as MockQdrant:
             mock_client = MagicMock()
             MockQdrant.return_value = mock_client
 
@@ -380,8 +449,8 @@ class TestYouTubeService:
         # Test the cleanup logic directly without instantiating the service
         test_path = Path("/tmp/test_audio_cleanup.mp3")
 
-        with patch.object(Path, 'exists', return_value=True):
-            with patch.object(Path, 'unlink') as mock_unlink:
+        with patch.object(Path, "exists", return_value=True):
+            with patch.object(Path, "unlink") as mock_unlink:
                 # Simulate what cleanup_audio does
                 if test_path.exists():
                     test_path.unlink()
@@ -394,7 +463,8 @@ class TestYouTubeService:
 
         # Parse hours, minutes, seconds
         import re
-        match = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', duration_str)
+
+        match = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", duration_str)
         if match:
             hours = int(match.group(1) or 0)
             minutes = int(match.group(2) or 0)
@@ -414,7 +484,7 @@ class TestYouTubeService:
         ]
 
         patterns = [
-            r'(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/)([a-zA-Z0-9_-]{11})',
+            r"(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/)([a-zA-Z0-9_-]{11})",
         ]
 
         for url, expected_id in urls:
@@ -444,7 +514,7 @@ class TestRerankerService:
         from app.services.reranker import RerankerService
 
         # When cross-encoder not available, should return original results
-        with patch('app.services.reranker.CROSS_ENCODER_AVAILABLE', False):
+        with patch("app.services.reranker.CROSS_ENCODER_AVAILABLE", False):
             service = RerankerService()
             results = [{"text": "Test content", "score": 0.8}]
 
@@ -459,12 +529,22 @@ class TestRerankerService:
         from app.services.reranker import RerankerService
 
         # When cross-encoder not available, results pass through unchanged
-        with patch('app.services.reranker.CROSS_ENCODER_AVAILABLE', False):
+        with patch("app.services.reranker.CROSS_ENCODER_AVAILABLE", False):
             service = RerankerService()
 
             results = [
-                {"text": "Content A", "score": 0.8, "episode_id": "ep1", "speaker": "Host"},
-                {"text": "Content B", "score": 0.7, "episode_id": "ep2", "speaker": "Guest"},
+                {
+                    "text": "Content A",
+                    "score": 0.8,
+                    "episode_id": "ep1",
+                    "speaker": "Host",
+                },
+                {
+                    "text": "Content B",
+                    "score": 0.7,
+                    "episode_id": "ep2",
+                    "speaker": "Guest",
+                },
             ]
 
             reranked = await service.rerank("test query", results)
@@ -494,9 +574,7 @@ class TestHybridSearchService:
             {"chunk_id": "a", "score": 0.75},
         ]
 
-        fused = service._reciprocal_rank_fusion(
-            vector_results, keyword_results, k=60
-        )
+        fused = service._reciprocal_rank_fusion(vector_results, keyword_results, k=60)
 
         # 'a' and 'b' should be in top results (appear in both)
         chunk_ids = [r["chunk_id"] for r in fused[:2]]
@@ -507,9 +585,11 @@ class TestHybridSearchService:
         """Should combine vector and keyword search."""
         from app.services.hybrid_search import HybridSearchService
 
-        with patch('app.services.hybrid_search.EmbeddingService') as MockEmbed, \
-             patch('app.services.hybrid_search.VectorStoreService') as MockVector, \
-             patch('app.services.hybrid_search.PostgresSearchService') as MockKeyword:
+        with patch("app.services.hybrid_search.EmbeddingService") as MockEmbed, patch(
+            "app.services.hybrid_search.VectorStoreService"
+        ) as MockVector, patch(
+            "app.services.hybrid_search.PostgresSearchService"
+        ) as MockKeyword:
 
             mock_embed = AsyncMock()
             mock_embed.embed_query.return_value = [0.1] * 1536

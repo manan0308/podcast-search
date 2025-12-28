@@ -1,6 +1,16 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Text, Integer, DateTime, ForeignKey, JSON, Boolean, Index
+from sqlalchemy import (
+    Column,
+    String,
+    Text,
+    Integer,
+    DateTime,
+    ForeignKey,
+    JSON,
+    Boolean,
+    Index,
+)
 from sqlalchemy.orm import relationship
 
 from app.database import Base, GUID
@@ -10,7 +20,9 @@ class Episode(Base):
     __tablename__ = "episodes"
 
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
-    channel_id = Column(GUID(), ForeignKey("channels.id", ondelete="CASCADE"), nullable=False)
+    channel_id = Column(
+        GUID(), ForeignKey("channels.id", ondelete="CASCADE"), nullable=False
+    )
 
     # YouTube data
     youtube_id = Column(String(50), unique=True, nullable=False, index=True)
@@ -22,12 +34,7 @@ class Episode(Base):
     duration_seconds = Column(Integer, nullable=True)
 
     # Processing status
-    status = Column(
-        String(20),
-        default="pending",
-        nullable=False,
-        index=True
-    )
+    status = Column(String(20), default="pending", nullable=False, index=True)
     # Valid statuses: pending, queued, processing, done, failed, skipped
 
     # Transcript data
@@ -41,8 +48,12 @@ class Episode(Base):
 
     # Relationships
     channel = relationship("Channel", back_populates="episodes")
-    utterances = relationship("Utterance", back_populates="episode", cascade="all, delete-orphan")
-    chunks = relationship("Chunk", back_populates="episode", cascade="all, delete-orphan")
+    utterances = relationship(
+        "Utterance", back_populates="episode", cascade="all, delete-orphan"
+    )
+    chunks = relationship(
+        "Chunk", back_populates="episode", cascade="all, delete-orphan"
+    )
     jobs = relationship("Job", back_populates="episode", cascade="all, delete-orphan")
 
     # Indexes

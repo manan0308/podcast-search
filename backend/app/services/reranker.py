@@ -1,9 +1,11 @@
 """Re-ranking service using cross-encoder."""
+
 from typing import Optional
 from loguru import logger
 
 try:
     from sentence_transformers import CrossEncoder
+
     CROSS_ENCODER_AVAILABLE = True
 except ImportError:
     CROSS_ENCODER_AVAILABLE = False

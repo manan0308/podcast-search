@@ -1,4 +1,5 @@
 """Retry and circuit breaker utilities for external API calls."""
+
 import asyncio
 import time
 from functools import wraps
@@ -12,8 +13,9 @@ T = TypeVar("T")
 
 class CircuitState(Enum):
     """Circuit breaker states."""
+
     CLOSED = "closed"  # Normal operation
-    OPEN = "open"      # Failing, reject requests
+    OPEN = "open"  # Failing, reject requests
     HALF_OPEN = "half_open"  # Testing if service recovered
 
 
@@ -32,6 +34,7 @@ class CircuitBreaker:
         async def call_openai():
             ...
     """
+
     name: str
     failure_threshold: int = 5
     recovery_timeout: float = 60.0  # seconds
@@ -81,6 +84,7 @@ class CircuitBreaker:
 
     def __call__(self, func: Callable[..., T]) -> Callable[..., T]:
         """Decorator to wrap function with circuit breaker."""
+
         @wraps(func)
         async def wrapper(*args, **kwargs) -> T:
             if self.state == CircuitState.OPEN:
@@ -102,6 +106,7 @@ class CircuitBreaker:
 
 class CircuitOpenError(Exception):
     """Raised when circuit breaker is open."""
+
     pass
 
 
@@ -127,6 +132,7 @@ def retry_async(
         async def call_api():
             ...
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @wraps(func)
         async def wrapper(*args, **kwargs) -> T:
@@ -141,6 +147,7 @@ def retry_async(
                     if attempt < max_retries:
                         # Add jitter (10% random variation)
                         import random
+
                         jitter = delay * 0.1 * (random.random() * 2 - 1)
                         sleep_time = min(delay + jitter, max_delay)
 
@@ -158,10 +165,13 @@ def retry_async(
             raise last_exception
 
         return wrapper
+
     return decorator
 
 
 # Pre-configured circuit breakers for common services
 openai_circuit = CircuitBreaker(name="openai", failure_threshold=5, recovery_timeout=60)
-anthropic_circuit = CircuitBreaker(name="anthropic", failure_threshold=5, recovery_timeout=60)
+anthropic_circuit = CircuitBreaker(
+    name="anthropic", failure_threshold=5, recovery_timeout=60
+)
 qdrant_circuit = CircuitBreaker(name="qdrant", failure_threshold=3, recovery_timeout=30)

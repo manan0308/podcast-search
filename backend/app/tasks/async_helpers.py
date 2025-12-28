@@ -4,11 +4,12 @@ Async helpers for Celery tasks.
 Provides efficient async execution in sync Celery context.
 Reuses event loop per worker instead of creating new loop per task.
 """
+
 import asyncio
 import threading
 from typing import Coroutine, TypeVar
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 # Thread-local storage for event loops (one per Celery worker thread)
 _thread_local = threading.local()
@@ -21,7 +22,11 @@ def get_event_loop() -> asyncio.AbstractEventLoop:
     Reuses the same loop for all tasks in a worker thread,
     avoiding the overhead of creating new loops per task.
     """
-    if not hasattr(_thread_local, 'loop') or _thread_local.loop is None or _thread_local.loop.is_closed():
+    if (
+        not hasattr(_thread_local, "loop")
+        or _thread_local.loop is None
+        or _thread_local.loop.is_closed()
+    ):
         _thread_local.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(_thread_local.loop)
     return _thread_local.loop
@@ -50,7 +55,7 @@ def cleanup_loop():
 
     Call this when worker is shutting down.
     """
-    if hasattr(_thread_local, 'loop') and _thread_local.loop is not None:
+    if hasattr(_thread_local, "loop") and _thread_local.loop is not None:
         if not _thread_local.loop.is_closed():
             _thread_local.loop.close()
         _thread_local.loop = None

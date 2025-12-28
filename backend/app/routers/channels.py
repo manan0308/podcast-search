@@ -21,17 +21,17 @@ from app.services.youtube import YouTubeService
 
 # YouTube URL validation patterns
 YOUTUBE_CHANNEL_PATTERNS = [
-    r'^https?://(?:www\.)?youtube\.com/@[\w\.\-]+/?$',
-    r'^https?://(?:www\.)?youtube\.com/channel/UC[\w\-]+/?$',
-    r'^https?://(?:www\.)?youtube\.com/c/[\w\.\-]+/?$',
-    r'^https?://(?:www\.)?youtube\.com/user/[\w\.\-]+/?$',
+    r"^https?://(?:www\.)?youtube\.com/@[\w\.\-]+/?$",
+    r"^https?://(?:www\.)?youtube\.com/channel/UC[\w\-]+/?$",
+    r"^https?://(?:www\.)?youtube\.com/c/[\w\.\-]+/?$",
+    r"^https?://(?:www\.)?youtube\.com/user/[\w\.\-]+/?$",
 ]
 
 YOUTUBE_VIDEO_PATTERNS = [
-    r'^https?://(?:www\.)?youtube\.com/watch\?v=([\w\-]+)',
-    r'^https?://youtu\.be/([\w\-]+)',
-    r'^https?://(?:www\.)?youtube\.com/embed/([\w\-]+)',
-    r'^https?://(?:www\.)?youtube\.com/v/([\w\-]+)',
+    r"^https?://(?:www\.)?youtube\.com/watch\?v=([\w\-]+)",
+    r"^https?://youtu\.be/([\w\-]+)",
+    r"^https?://(?:www\.)?youtube\.com/embed/([\w\-]+)",
+    r"^https?://(?:www\.)?youtube\.com/v/([\w\-]+)",
 ]
 
 
@@ -56,15 +56,14 @@ def is_video_url(url: str) -> bool:
     """Check if URL is a YouTube video URL."""
     return extract_video_id(url) is not None
 
+
 router = APIRouter()
 
 
 @router.get("", response_model=ChannelListResponse)
 async def list_channels(db: DB):
     """List all channels."""
-    result = await db.execute(
-        select(Channel).order_by(Channel.created_at.desc())
-    )
+    result = await db.execute(select(Channel).order_by(Channel.created_at.desc()))
     channels = result.scalars().all()
 
     return ChannelListResponse(
@@ -76,15 +75,12 @@ async def list_channels(db: DB):
 @router.get("/{channel_id}", response_model=ChannelResponse)
 async def get_channel(channel_id: UUID, db: DB):
     """Get channel by ID."""
-    result = await db.execute(
-        select(Channel).where(Channel.id == channel_id)
-    )
+    result = await db.execute(select(Channel).where(Channel.id == channel_id))
     channel = result.scalar_one_or_none()
 
     if not channel:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Channel not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Channel not found"
         )
 
     return ChannelResponse.model_validate(channel)
@@ -93,15 +89,12 @@ async def get_channel(channel_id: UUID, db: DB):
 @router.get("/slug/{slug}", response_model=ChannelResponse)
 async def get_channel_by_slug(slug: str, db: DB):
     """Get channel by slug."""
-    result = await db.execute(
-        select(Channel).where(Channel.slug == slug)
-    )
+    result = await db.execute(select(Channel).where(Channel.slug == slug))
     channel = result.scalar_one_or_none()
 
     if not channel:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Channel not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Channel not found"
         )
 
     return ChannelResponse.model_validate(channel)
@@ -129,7 +122,7 @@ async def fetch_video(
     try:
         # Get video info
         video_info = await youtube.get_video_info(video_id)
-        
+
         if not video_info:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -158,7 +151,11 @@ async def fetch_video(
                 "title": video_info.title,
                 "description": video_info.description,
                 "duration_seconds": video_info.duration_seconds,
-                "published_at": video_info.published_at.isoformat() if video_info.published_at else None,
+                "published_at": (
+                    video_info.published_at.isoformat()
+                    if video_info.published_at
+                    else None
+                ),
                 "thumbnail_url": video_info.thumbnail_url,
                 "already_exists": existing_ep is not None,
                 "existing_episode_id": str(existing_ep.id) if existing_ep else None,
@@ -168,8 +165,12 @@ async def fetch_video(
                 "youtube_channel_id": video_info.channel_id,
                 "thumbnail_url": None,  # Not available from video info
                 "already_exists": existing_channel is not None,
-                "existing_channel_id": str(existing_channel.id) if existing_channel else None,
-                "existing_channel_slug": existing_channel.slug if existing_channel else None,
+                "existing_channel_id": (
+                    str(existing_channel.id) if existing_channel else None
+                ),
+                "existing_channel_slug": (
+                    existing_channel.slug if existing_channel else None
+                ),
             },
         }
 
@@ -179,7 +180,7 @@ async def fetch_video(
         logger.error(f"Failed to fetch video: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to fetch video. Please check the URL and try again."
+            detail="Failed to fetch video. Please check the URL and try again.",
         )
 
 
@@ -208,9 +209,7 @@ async def fetch_channel(
 
         # Check if channel already exists
         existing = await db.execute(
-            select(Channel).where(
-                Channel.youtube_channel_id == channel_info.channel_id
-            )
+            select(Channel).where(Channel.youtube_channel_id == channel_info.channel_id)
         )
         existing_channel = existing.scalar_one_or_none()
 
@@ -232,15 +231,21 @@ async def fetch_channel(
 
         episode_previews = []
         for ep in episodes:
-            episode_previews.append(EpisodePreview(
-                id=UUID(int=0) if ep.youtube_id not in existing_episode_ids else UUID(int=1),
-                youtube_id=ep.youtube_id,
-                title=ep.title,
-                duration_seconds=ep.duration_seconds,
-                published_at=ep.published_at,
-                thumbnail_url=ep.thumbnail_url,
-                selected=ep.youtube_id not in existing_episode_ids,
-            ))
+            episode_previews.append(
+                EpisodePreview(
+                    id=(
+                        UUID(int=0)
+                        if ep.youtube_id not in existing_episode_ids
+                        else UUID(int=1)
+                    ),
+                    youtube_id=ep.youtube_id,
+                    title=ep.title,
+                    duration_seconds=ep.duration_seconds,
+                    published_at=ep.published_at,
+                    thumbnail_url=ep.thumbnail_url,
+                    selected=ep.youtube_id not in existing_episode_ids,
+                )
+            )
 
         return ChannelFetchResponse(
             channel_id=existing_channel.id if existing_channel else None,
@@ -260,7 +265,7 @@ async def fetch_channel(
         logger.error(f"Failed to fetch channel: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to fetch channel. Please check the URL and try again."
+            detail="Failed to fetch channel. Please check the URL and try again.",
         )
 
 
@@ -278,9 +283,7 @@ async def create_channel(
     # Ensure unique slug
     counter = 1
     while True:
-        existing = await db.execute(
-            select(Channel).where(Channel.slug == slug)
-        )
+        existing = await db.execute(select(Channel).where(Channel.slug == slug))
         if not existing.scalar_one_or_none():
             break
         slug = f"{base_slug}-{counter}"
@@ -312,15 +315,12 @@ async def update_channel(
     _: AdminAuth,
 ):
     """Update channel settings."""
-    result = await db.execute(
-        select(Channel).where(Channel.id == channel_id)
-    )
+    result = await db.execute(select(Channel).where(Channel.id == channel_id))
     channel = result.scalar_one_or_none()
 
     if not channel:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Channel not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Channel not found"
         )
 
     # Update fields
@@ -341,19 +341,17 @@ async def delete_channel(
     _: AdminAuth,
 ):
     """Delete channel and all associated data."""
-    result = await db.execute(
-        select(Channel).where(Channel.id == channel_id)
-    )
+    result = await db.execute(select(Channel).where(Channel.id == channel_id))
     channel = result.scalar_one_or_none()
 
     if not channel:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Channel not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Channel not found"
         )
 
     # Delete from vector store
     from app.services.vector_store import VectorStoreService
+
     vector_store = VectorStoreService()
     await vector_store.delete_by_channel(str(channel_id))
 

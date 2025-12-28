@@ -15,6 +15,7 @@ class TranscriptionStatus(Enum):
 @dataclass
 class Utterance:
     """A single speaker utterance from transcription."""
+
     speaker: str  # "A", "B", "C" (raw from provider)
     text: str
     start_ms: int
@@ -26,6 +27,7 @@ class Utterance:
 @dataclass
 class TranscriptResult:
     """Result of a transcription job."""
+
     provider_job_id: str
     status: TranscriptionStatus
     utterances: list[Utterance] | None = None
@@ -65,10 +67,7 @@ class TranscriptionProvider(ABC):
 
     @abstractmethod
     async def submit_job(
-        self,
-        audio_path: Path,
-        speakers_expected: int = 2,
-        language: str = "en"
+        self, audio_path: Path, speakers_expected: int = 2, language: str = "en"
     ) -> str:
         """
         Submit audio for transcription.
@@ -86,7 +85,7 @@ class TranscriptionProvider(ABC):
         provider_job_id: str,
         initial_poll_interval: float = 5.0,
         max_poll_interval: float = 30.0,
-        timeout: float = 3600.0
+        timeout: float = 3600.0,
     ) -> TranscriptResult:
         """Wait for job to complete with exponential backoff polling."""
         elapsed = 0.0
@@ -109,14 +108,11 @@ class TranscriptionProvider(ABC):
         return TranscriptResult(
             provider_job_id=provider_job_id,
             status=TranscriptionStatus.FAILED,
-            error_message=f"Transcription timed out after {timeout} seconds"
+            error_message=f"Transcription timed out after {timeout} seconds",
         )
 
     async def transcribe(
-        self,
-        audio_path: Path,
-        speakers_expected: int = 2,
-        language: str = "en"
+        self, audio_path: Path, speakers_expected: int = 2, language: str = "en"
     ) -> TranscriptResult:
         """
         Convenience method: submit and wait for completion.

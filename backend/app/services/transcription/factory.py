@@ -30,7 +30,7 @@ def get_provider(provider_name: str | None = None) -> TranscriptionProvider:
                 raise ValueError("ASSEMBLYAI_API_KEY not configured")
             return AssemblyAIProvider(
                 api_key=settings.ASSEMBLYAI_API_KEY,
-                max_concurrent=settings.ASSEMBLYAI_MAX_CONCURRENT
+                max_concurrent=settings.ASSEMBLYAI_MAX_CONCURRENT,
             )
 
         case "deepgram":
@@ -38,14 +38,14 @@ def get_provider(provider_name: str | None = None) -> TranscriptionProvider:
                 raise ValueError("DEEPGRAM_API_KEY not configured")
             return DeepgramProvider(
                 api_key=settings.DEEPGRAM_API_KEY,
-                max_concurrent=settings.DEEPGRAM_MAX_CONCURRENT
+                max_concurrent=settings.DEEPGRAM_MAX_CONCURRENT,
             )
 
         case "whisper":
             return WhisperProvider(
                 model=settings.WHISPER_MODEL,
                 device=settings.WHISPER_DEVICE,
-                max_concurrent=settings.WHISPER_MAX_CONCURRENT
+                max_concurrent=settings.WHISPER_MAX_CONCURRENT,
             )
 
         case "faster-whisper":
@@ -95,26 +95,30 @@ def get_available_providers() -> list[dict]:
     providers = []
 
     # AssemblyAI
-    providers.append({
-        "name": "assemblyai",
-        "display_name": "AssemblyAI",
-        "max_concurrent": settings.ASSEMBLYAI_MAX_CONCURRENT,
-        "cost_per_hour_cents": 37,
-        "supports_diarization": True,
-        "available": bool(settings.ASSEMBLYAI_API_KEY),
-        "note": None
-    })
+    providers.append(
+        {
+            "name": "assemblyai",
+            "display_name": "AssemblyAI",
+            "max_concurrent": settings.ASSEMBLYAI_MAX_CONCURRENT,
+            "cost_per_hour_cents": 37,
+            "supports_diarization": True,
+            "available": bool(settings.ASSEMBLYAI_API_KEY),
+            "note": None,
+        }
+    )
 
     # Deepgram
-    providers.append({
-        "name": "deepgram",
-        "display_name": "Deepgram",
-        "max_concurrent": settings.DEEPGRAM_MAX_CONCURRENT,
-        "cost_per_hour_cents": 26,
-        "supports_diarization": True,
-        "available": bool(settings.DEEPGRAM_API_KEY),
-        "note": None
-    })
+    providers.append(
+        {
+            "name": "deepgram",
+            "display_name": "Deepgram",
+            "max_concurrent": settings.DEEPGRAM_MAX_CONCURRENT,
+            "cost_per_hour_cents": 26,
+            "supports_diarization": True,
+            "available": bool(settings.DEEPGRAM_API_KEY),
+            "note": None,
+        }
+    )
 
     # Whisper (original OpenAI whisper)
     whisper_available = True
@@ -126,15 +130,21 @@ def get_available_providers() -> list[dict]:
         whisper_available = False
         whisper_note = "openai-whisper not installed"
 
-    providers.append({
-        "name": "whisper",
-        "display_name": "Local Whisper (OpenAI)",
-        "max_concurrent": settings.WHISPER_MAX_CONCURRENT,
-        "cost_per_hour_cents": 0,
-        "supports_diarization": False,
-        "available": whisper_available,
-        "note": f"Original OpenAI Whisper on {settings.WHISPER_DEVICE.upper()}" if whisper_available else whisper_note
-    })
+    providers.append(
+        {
+            "name": "whisper",
+            "display_name": "Local Whisper (OpenAI)",
+            "max_concurrent": settings.WHISPER_MAX_CONCURRENT,
+            "cost_per_hour_cents": 0,
+            "supports_diarization": False,
+            "available": whisper_available,
+            "note": (
+                f"Original OpenAI Whisper on {settings.WHISPER_DEVICE.upper()}"
+                if whisper_available
+                else whisper_note
+            ),
+        }
+    )
 
     # Faster-Whisper (4x faster than OpenAI Whisper)
     faster_whisper_available = True
@@ -149,6 +159,7 @@ def get_available_providers() -> list[dict]:
 
     try:
         import pyannote.audio
+
         diarization_available = True
     except ImportError:
         pass
@@ -157,44 +168,65 @@ def get_available_providers() -> list[dict]:
     if device_info == "AUTO":
         try:
             import torch
+
             device_info = "GPU (CUDA)" if torch.cuda.is_available() else "CPU"
         except ImportError:
             device_info = "CPU"
 
-    providers.append({
-        "name": "faster-whisper",
-        "display_name": "Faster-Whisper (Local)",
-        "max_concurrent": settings.FASTER_WHISPER_MAX_CONCURRENT,
-        "cost_per_hour_cents": 0,
-        "supports_diarization": diarization_available,
-        "available": faster_whisper_available,
-        "note": f"4x faster on {device_info}, FREE" + (" + diarization" if diarization_available else "") if faster_whisper_available else faster_whisper_note
-    })
+    providers.append(
+        {
+            "name": "faster-whisper",
+            "display_name": "Faster-Whisper (Local)",
+            "max_concurrent": settings.FASTER_WHISPER_MAX_CONCURRENT,
+            "cost_per_hour_cents": 0,
+            "supports_diarization": diarization_available,
+            "available": faster_whisper_available,
+            "note": (
+                f"4x faster on {device_info}, FREE"
+                + (" + diarization" if diarization_available else "")
+                if faster_whisper_available
+                else faster_whisper_note
+            ),
+        }
+    )
 
     # Modal Cloud (serverless GPU)
     import os
+
     modal_configured = bool(os.environ.get("MODAL_TOKEN_ID"))
 
-    providers.append({
-        "name": "modal-cloud",
-        "display_name": "Modal Cloud GPU",
-        "max_concurrent": settings.MODAL_MAX_CONCURRENT,
-        "cost_per_hour_cents": 3,  # ~$0.03/hr of audio
-        "supports_diarization": False,
-        "available": MODAL_AVAILABLE and modal_configured,
-        "note": f"70-200x realtime on {settings.MODAL_GPU_TYPE}, ~$0.03/hr" if MODAL_AVAILABLE else "modal not installed"
-    })
+    providers.append(
+        {
+            "name": "modal-cloud",
+            "display_name": "Modal Cloud GPU",
+            "max_concurrent": settings.MODAL_MAX_CONCURRENT,
+            "cost_per_hour_cents": 3,  # ~$0.03/hr of audio
+            "supports_diarization": False,
+            "available": MODAL_AVAILABLE and modal_configured,
+            "note": (
+                f"70-200x realtime on {settings.MODAL_GPU_TYPE}, ~$0.03/hr"
+                if MODAL_AVAILABLE
+                else "modal not installed"
+            ),
+        }
+    )
 
     # Modal Hybrid (local download + cloud transcription)
-    providers.append({
-        "name": "modal-hybrid",
-        "display_name": "Modal Hybrid (Recommended for bulk)",
-        "max_concurrent": settings.MODAL_MAX_CONCURRENT,
-        "cost_per_hour_cents": 3,
-        "supports_diarization": False,
-        "available": MODAL_AVAILABLE and modal_configured,
-        "note": "Downloads locally, transcribes on cloud GPU. Best for bulk channel imports." if MODAL_AVAILABLE else "modal not installed"
-    })
+    providers.append(
+        {
+            "name": "modal-hybrid",
+            "display_name": "Modal Hybrid (Recommended for bulk)",
+            "max_concurrent": settings.MODAL_MAX_CONCURRENT,
+            "cost_per_hour_cents": 3,
+            "supports_diarization": False,
+            "available": MODAL_AVAILABLE and modal_configured,
+            "note": (
+                "Downloads locally, transcribes on cloud GPU. Best for bulk channel imports."
+                if MODAL_AVAILABLE
+                else "modal not installed"
+            ),
+        }
+    )
 
     return providers
 

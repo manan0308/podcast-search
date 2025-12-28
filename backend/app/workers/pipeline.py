@@ -78,23 +78,33 @@ class TranscriptionPipeline:
 
         try:
             # Update job status
-            await self._update_job(job, status="downloading", progress=5, step="Downloading audio")
+            await self._update_job(
+                job, status="downloading", progress=5, step="Downloading audio"
+            )
 
             # Step 1: Download audio
             audio_path = await self._download_audio(episode)
             await self._log(job, "info", f"Downloaded audio to {audio_path}")
 
             # Update job status
-            await self._update_job(job, status="transcribing", progress=20, step="Transcribing")
+            await self._update_job(
+                job, status="transcribing", progress=20, step="Transcribing"
+            )
 
             # Step 2: Transcribe
             transcript = await self._transcribe(audio_path, job)
-            await self._log(job, "info", f"Transcription complete: {len(transcript.utterances or [])} utterances")
+            await self._log(
+                job,
+                "info",
+                f"Transcription complete: {len(transcript.utterances or [])} utterances",
+            )
             # Checkpoint commit after transcription (expensive operation) to save progress
             await self.db.commit()
 
             # Step 3: Speaker labeling
-            await self._update_job(job, status="labeling", progress=50, step="Identifying speakers")
+            await self._update_job(
+                job, status="labeling", progress=50, step="Identifying speakers"
+            )
 
             speakers = self.speakers or (channel.speakers if channel else [])
             labeled_utterances = await self._label_speakers(
@@ -111,9 +121,12 @@ class TranscriptionPipeline:
             await self.db.commit()
 
             # Step 5: Chunking (with contextual headers for better embeddings)
-            await self._update_job(job, status="chunking", progress=65, step="Creating chunks")
+            await self._update_job(
+                job, status="chunking", progress=65, step="Creating chunks"
+            )
 
             from app.services.chunking import EpisodeContext
+
             episode_context = EpisodeContext(
                 episode_title=episode.title,
                 channel_name=channel.name if channel else "Unknown",
@@ -124,10 +137,14 @@ class TranscriptionPipeline:
                 str(episode.id),
                 episode_context=episode_context,
             )
-            await self._log(job, "info", f"Created {len(chunks)} chunks with contextual headers")
+            await self._log(
+                job, "info", f"Created {len(chunks)} chunks with contextual headers"
+            )
 
             # Step 6: Embedding
-            await self._update_job(job, status="embedding", progress=80, step="Generating embeddings")
+            await self._update_job(
+                job, status="embedding", progress=80, step="Generating embeddings"
+            )
 
             chunk_data = await self._embed_and_store(episode, channel, chunks)
             await self._log(job, "info", f"Stored {len(chunk_data)} vectors")
@@ -141,7 +158,9 @@ class TranscriptionPipeline:
             # Step 9: Update episode status
             episode.status = "done"
             episode.processed_at = datetime.utcnow()
-            episode.word_count = sum(len(u.get("text", "").split()) for u in labeled_utterances)
+            episode.word_count = sum(
+                len(u.get("text", "").split()) for u in labeled_utterances
+            )
             episode.transcript_raw = transcript.raw_response
 
             # Update channel stats
@@ -168,7 +187,7 @@ class TranscriptionPipeline:
 
             # Cleanup audio file on failure to prevent disk exhaustion
             try:
-                if 'audio_path' in locals() and audio_path:
+                if "audio_path" in locals() and audio_path:
                     await self.youtube.cleanup_audio(audio_path)
                     logger.info(f"Cleaned up audio file after failure: {audio_path}")
             except Exception as cleanup_error:
@@ -188,21 +207,15 @@ class TranscriptionPipeline:
             return False
 
     async def _get_episode(self, episode_id: uuid.UUID) -> Episode | None:
-        result = await self.db.execute(
-            select(Episode).where(Episode.id == episode_id)
-        )
+        result = await self.db.execute(select(Episode).where(Episode.id == episode_id))
         return result.scalar_one_or_none()
 
     async def _get_job(self, job_id: uuid.UUID) -> Job | None:
-        result = await self.db.execute(
-            select(Job).where(Job.id == job_id)
-        )
+        result = await self.db.execute(select(Job).where(Job.id == job_id))
         return result.scalar_one_or_none()
 
     async def _get_channel(self, channel_id: uuid.UUID) -> Channel | None:
-        result = await self.db.execute(
-            select(Channel).where(Channel.id == channel_id)
-        )
+        result = await self.db.execute(select(Channel).where(Channel.id == channel_id))
         return result.scalar_one_or_none()
 
     async def _update_job(
@@ -244,7 +257,14 @@ class TranscriptionPipeline:
         except Exception as e:
             logger.warning(f"Failed to publish job update: {e}")
 
-    async def _log(self, job: Job, level: str, message: str, metadata: dict = None, commit: bool = False):
+    async def _log(
+        self,
+        job: Job,
+        level: str,
+        message: str,
+        metadata: dict = None,
+        commit: bool = False,
+    ):
         log = ActivityLog(
             batch_id=job.batch_id,
             job_id=job.id,
@@ -302,9 +322,12 @@ class TranscriptionPipeline:
 
         return labeled
 
-    async def _save_utterances(self, episode: Episode, utterances: list[dict], commit: bool = False):
+    async def _save_utterances(
+        self, episode: Episode, utterances: list[dict], commit: bool = False
+    ):
         # Delete existing utterances
         from sqlalchemy import delete
+
         await self.db.execute(
             delete(Utterance).where(Utterance.episode_id == episode.id)
         )
@@ -370,9 +393,8 @@ class TranscriptionPipeline:
 
         # Save chunks to database
         from sqlalchemy import delete
-        await self.db.execute(
-            delete(Chunk).where(Chunk.episode_id == episode.id)
-        )
+
+        await self.db.execute(delete(Chunk).where(Chunk.episode_id == episode.id))
 
         for chunk_dict, point_id in zip(chunk_data, point_ids):
             db_chunk = Chunk(

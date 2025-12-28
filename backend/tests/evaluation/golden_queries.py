@@ -6,6 +6,7 @@ Evaluates search quality using:
 2. Metrics: Precision@K, Recall@K, MRR, NDCG
 3. Supports both semantic and hybrid search evaluation
 """
+
 import asyncio
 import json
 from dataclasses import dataclass, field
@@ -18,6 +19,7 @@ from loguru import logger
 @dataclass
 class GoldenQuery:
     """A test query with known relevant results."""
+
     query: str
     relevant_chunk_ids: list[str]  # Ground truth
     relevant_keywords: list[str] = field(default_factory=list)  # Alternative matching
@@ -28,6 +30,7 @@ class GoldenQuery:
 @dataclass
 class EvaluationResult:
     """Results from evaluating a single query."""
+
     query: str
     precision_at_5: float
     precision_at_10: float
@@ -42,6 +45,7 @@ class EvaluationResult:
 @dataclass
 class EvaluationSummary:
     """Aggregate evaluation metrics."""
+
     total_queries: int
     mean_precision_at_5: float
     mean_precision_at_10: float
@@ -68,13 +72,15 @@ class SearchEvaluator:
             data = json.load(f)
 
         for item in data["queries"]:
-            self.golden_queries.append(GoldenQuery(
-                query=item["query"],
-                relevant_chunk_ids=item.get("relevant_chunk_ids", []),
-                relevant_keywords=item.get("relevant_keywords", []),
-                category=item.get("category", "general"),
-                difficulty=item.get("difficulty", "medium"),
-            ))
+            self.golden_queries.append(
+                GoldenQuery(
+                    query=item["query"],
+                    relevant_chunk_ids=item.get("relevant_chunk_ids", []),
+                    relevant_keywords=item.get("relevant_keywords", []),
+                    category=item.get("category", "general"),
+                    difficulty=item.get("difficulty", "medium"),
+                )
+            )
 
         logger.info(f"Loaded {len(self.golden_queries)} golden queries")
 
@@ -93,8 +99,7 @@ class SearchEvaluator:
             k: Cutoff for metrics
         """
         retrieved_ids = [
-            str(r.get("chunk_id", r.get("id", "")))
-            for r in retrieved_results[:k]
+            str(r.get("chunk_id", r.get("id", ""))) for r in retrieved_results[:k]
         ]
 
         # Check relevance by ID or keyword match
@@ -120,8 +125,14 @@ class SearchEvaluator:
         relevant_found_unique = list(set(relevant_found))
 
         # Precision@K
-        precision_5 = len([r for r in relevant_found[:5]]) / 5 if len(retrieved_ids) >= 5 else 0
-        precision_10 = len(relevant_found_unique) / min(k, len(retrieved_ids)) if retrieved_ids else 0
+        precision_5 = (
+            len([r for r in relevant_found[:5]]) / 5 if len(retrieved_ids) >= 5 else 0
+        )
+        precision_10 = (
+            len(relevant_found_unique) / min(k, len(retrieved_ids))
+            if retrieved_ids
+            else 0
+        )
 
         # Recall@K
         total_relevant = len(relevant_set) or len(query.relevant_keywords)
@@ -247,7 +258,9 @@ class SearchEvaluator:
         print()
         print("BY CATEGORY:")
         for cat, metrics in summary.per_category.items():
-            print(f"  {cat}: {metrics['count']} queries, P@10={metrics['precision_at_10']:.3f}, MRR={metrics['mrr']:.3f}")
+            print(
+                f"  {cat}: {metrics['count']} queries, P@10={metrics['precision_at_10']:.3f}, MRR={metrics['mrr']:.3f}"
+            )
         print("=" * 60)
 
 
@@ -289,7 +302,10 @@ async def run_evaluation_example():
 
     # Mock results for demo
     mock_results = [
-        {"chunk_id": "test-1", "text": "Investing is about compound interest and patience"},
+        {
+            "chunk_id": "test-1",
+            "text": "Investing is about compound interest and patience",
+        },
         {"chunk_id": "test-2", "text": "The stock market rewards long term thinking"},
     ]
 

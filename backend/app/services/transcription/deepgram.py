@@ -43,10 +43,7 @@ class DeepgramProvider(TranscriptionProvider):
         }
 
     async def submit_job(
-        self,
-        audio_path: Path,
-        speakers_expected: int = 2,
-        language: str = "en"
+        self, audio_path: Path, speakers_expected: int = 2, language: str = "en"
     ) -> str:
         """
         Submit audio to Deepgram for transcription.
@@ -67,15 +64,11 @@ class DeepgramProvider(TranscriptionProvider):
         # For sync processing, we don't have status checks
         # This is mainly for API compatibility
         return TranscriptResult(
-            provider_job_id=provider_job_id,
-            status=TranscriptionStatus.COMPLETED
+            provider_job_id=provider_job_id, status=TranscriptionStatus.COMPLETED
         )
 
     async def transcribe(
-        self,
-        audio_path: Path,
-        speakers_expected: int = 2,
-        language: str = "en"
+        self, audio_path: Path, speakers_expected: int = 2, language: str = "en"
     ) -> TranscriptResult:
         """Transcribe audio file using Deepgram."""
         import uuid
@@ -112,7 +105,7 @@ class DeepgramProvider(TranscriptionProvider):
                     return TranscriptResult(
                         provider_job_id=job_id,
                         status=TranscriptionStatus.FAILED,
-                        error_message=f"Deepgram API error: {response.status_code} - {error_text}"
+                        error_message=f"Deepgram API error: {response.status_code} - {error_text}",
                     )
 
                 data = response.json()
@@ -122,7 +115,7 @@ class DeepgramProvider(TranscriptionProvider):
             return TranscriptResult(
                 provider_job_id=job_id,
                 status=TranscriptionStatus.FAILED,
-                error_message=str(e)
+                error_message=str(e),
             )
 
         # Parse response
@@ -133,7 +126,7 @@ class DeepgramProvider(TranscriptionProvider):
             return TranscriptResult(
                 provider_job_id=job_id,
                 status=TranscriptionStatus.FAILED,
-                error_message="No channels in Deepgram response"
+                error_message="No channels in Deepgram response",
             )
 
         # Get utterances with speaker labels
@@ -145,13 +138,15 @@ class DeepgramProvider(TranscriptionProvider):
 
         for utt in dg_utterances:
             speaker_id = utt.get("speaker", 0)
-            utterances.append(Utterance(
-                speaker=chr(65 + speaker_id),  # Convert 0,1,2 to A,B,C
-                text=utt.get("transcript", ""),
-                start_ms=int(utt.get("start", 0) * 1000),
-                end_ms=int(utt.get("end", 0) * 1000),
-                confidence=utt.get("confidence"),
-            ))
+            utterances.append(
+                Utterance(
+                    speaker=chr(65 + speaker_id),  # Convert 0,1,2 to A,B,C
+                    text=utt.get("transcript", ""),
+                    start_ms=int(utt.get("start", 0) * 1000),
+                    end_ms=int(utt.get("end", 0) * 1000),
+                    confidence=utt.get("confidence"),
+                )
+            )
 
         # Get full transcript
         alternatives = channel_data.get("alternatives", [])
@@ -173,5 +168,5 @@ class DeepgramProvider(TranscriptionProvider):
             full_text=full_text,
             duration_ms=duration_ms,
             cost_cents=cost_cents,
-            raw_response=data
+            raw_response=data,
         )

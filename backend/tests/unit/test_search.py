@@ -1,4 +1,5 @@
 """Unit tests for search services."""
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -13,7 +14,9 @@ class TestSearchService:
     """Tests for semantic search service."""
 
     @pytest.mark.asyncio
-    async def test_search_empty_query_returns_empty(self, db_session, mock_embedding_service, mock_vector_store):
+    async def test_search_empty_query_returns_empty(
+        self, db_session, mock_embedding_service, mock_vector_store
+    ):
         """Empty query should return empty results."""
         service = SearchService(
             db=db_session,
@@ -31,7 +34,9 @@ class TestSearchService:
         mock_embedding_service.embed_query.assert_called_once_with("test query")
 
     @pytest.mark.asyncio
-    async def test_search_with_channel_filter(self, db_session, mock_embedding_service, mock_vector_store):
+    async def test_search_with_channel_filter(
+        self, db_session, mock_embedding_service, mock_vector_store
+    ):
         """Search should pass channel filter to vector store."""
         service = SearchService(
             db=db_session,
@@ -49,7 +54,9 @@ class TestSearchService:
         assert call_kwargs["channel_id"] == str(channel_id)
 
     @pytest.mark.asyncio
-    async def test_search_with_speaker_filter(self, db_session, mock_embedding_service, mock_vector_store):
+    async def test_search_with_speaker_filter(
+        self, db_session, mock_embedding_service, mock_vector_store
+    ):
         """Search should pass speaker filter to vector store."""
         service = SearchService(
             db=db_session,
@@ -65,7 +72,9 @@ class TestSearchService:
         assert call_kwargs["speaker"] == "Sam Parr"
 
     @pytest.mark.asyncio
-    async def test_search_respects_limit(self, db_session, mock_embedding_service, mock_vector_store):
+    async def test_search_respects_limit(
+        self, db_session, mock_embedding_service, mock_vector_store
+    ):
         """Search should respect the limit parameter."""
         service = SearchService(
             db=db_session,
@@ -112,9 +121,13 @@ class TestHybridSearchService:
         assert "c" in chunk_ids
 
     @pytest.mark.asyncio
-    async def test_hybrid_search_uses_both_methods(self, db_session, mock_embedding_service, mock_vector_store):
+    async def test_hybrid_search_uses_both_methods(
+        self, db_session, mock_embedding_service, mock_vector_store
+    ):
         """Hybrid search should query both semantic and keyword."""
-        with patch.object(HybridSearchService, '_keyword_search', new_callable=AsyncMock) as mock_keyword:
+        with patch.object(
+            HybridSearchService, "_keyword_search", new_callable=AsyncMock
+        ) as mock_keyword:
             mock_keyword.return_value = []
             mock_vector_store.search.return_value = []
 

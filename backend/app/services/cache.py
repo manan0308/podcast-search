@@ -1,4 +1,5 @@
 """Redis caching service with retry logic."""
+
 import json
 import hashlib
 import asyncio
@@ -19,7 +20,7 @@ async def _retry_redis(func, max_retries: int = 2, delay: float = 0.5):
         except (redis.ConnectionError, redis.TimeoutError) as e:
             last_error = e
             if attempt < max_retries:
-                await asyncio.sleep(delay * (2 ** attempt))
+                await asyncio.sleep(delay * (2**attempt))
                 logger.warning(f"Redis retry {attempt + 1}/{max_retries}: {e}")
     raise last_error
 

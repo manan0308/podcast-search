@@ -1,4 +1,5 @@
 """Pytest configuration and fixtures for podcast search backend tests."""
+
 import asyncio
 import os
 import pytest
@@ -22,7 +23,9 @@ TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 def pytest_configure(config):
     """Configure custom pytest markers."""
-    config.addinivalue_line("markers", "e2e: End-to-end tests (require running services)")
+    config.addinivalue_line(
+        "markers", "e2e: End-to-end tests (require running services)"
+    )
     config.addinivalue_line("markers", "smoke: Smoke tests (quick sanity checks)")
     config.addinivalue_line("markers", "slow: Slow tests (transcription, etc.)")
 
@@ -73,6 +76,7 @@ async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
 @pytest.fixture(scope="function")
 async def client(db_session) -> AsyncGenerator[AsyncClient, None]:
     """Create test HTTP client with mocked database."""
+
     async def override_get_db():
         yield db_session
 

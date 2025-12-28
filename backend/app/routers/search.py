@@ -22,7 +22,9 @@ async def search_rate_limit(request: Request):
     )
 
 
-@router.post("", response_model=SearchResponse, dependencies=[Depends(search_rate_limit)])
+@router.post(
+    "", response_model=SearchResponse, dependencies=[Depends(search_rate_limit)]
+)
 async def search(
     request: SearchRequest,
     db: DB,
@@ -51,7 +53,9 @@ async def search(
 
     # Use hybrid search if enabled (default)
     if request.use_hybrid:
-        logger.info(f"Hybrid search: '{request.query}' (semantic={request.semantic_weight}, keyword={request.keyword_weight}, rerank={request.use_reranking})")
+        logger.info(
+            f"Hybrid search: '{request.query}' (semantic={request.semantic_weight}, keyword={request.keyword_weight}, rerank={request.use_reranking})"
+        )
 
         embedding_service = EmbeddingService()
         vector_store = VectorStoreService()
@@ -125,9 +129,8 @@ async def get_speakers(db: DB):
 
     # Also get speakers from utterances
     from app.models import Utterance
-    utt_result = await db.execute(
-        select(distinct(Utterance.speaker))
-    )
+
+    utt_result = await db.execute(select(distinct(Utterance.speaker)))
     for speaker in utt_result.scalars():
         if speaker:
             all_speakers.add(speaker)

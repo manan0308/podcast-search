@@ -6,6 +6,7 @@ Provides WebSocket endpoints for:
 - Batch status updates
 - Global activity feed
 """
+
 import json
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from loguru import logger
@@ -18,7 +19,10 @@ router = APIRouter()
 @router.websocket("/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
-    channels: str = Query(default="updates", description="Comma-separated list of channels to subscribe to"),
+    channels: str = Query(
+        default="updates",
+        description="Comma-separated list of channels to subscribe to",
+    ),
 ):
     """
     WebSocket endpoint for real-time updates.
@@ -58,34 +62,42 @@ async def websocket_endpoint(
                     channel = message.get("channel")
                     if channel:
                         await manager.subscribe(websocket, channel)
-                        await websocket.send_json({
-                            "type": "subscribed",
-                            "channel": channel,
-                        })
+                        await websocket.send_json(
+                            {
+                                "type": "subscribed",
+                                "channel": channel,
+                            }
+                        )
 
                 elif action == "unsubscribe":
                     channel = message.get("channel")
                     if channel:
                         await manager.unsubscribe(websocket, channel)
-                        await websocket.send_json({
-                            "type": "unsubscribed",
-                            "channel": channel,
-                        })
+                        await websocket.send_json(
+                            {
+                                "type": "unsubscribed",
+                                "channel": channel,
+                            }
+                        )
 
                 elif action == "ping":
                     await websocket.send_json({"type": "pong"})
 
                 else:
-                    await websocket.send_json({
-                        "type": "error",
-                        "message": f"Unknown action: {action}",
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "message": f"Unknown action: {action}",
+                        }
+                    )
 
             except json.JSONDecodeError:
-                await websocket.send_json({
-                    "type": "error",
-                    "message": "Invalid JSON",
-                })
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": "Invalid JSON",
+                    }
+                )
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
