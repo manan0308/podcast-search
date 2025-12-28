@@ -224,7 +224,7 @@ def reset_channel(
     """Reset a channel (delete all data and re-import)."""
 
     async def _reset():
-        from sqlalchemy import delete
+        from sqlalchemy import delete, select
         from app.database import AsyncSessionLocal
         from app.models import Episode, Job, Utterance, Chunk
 

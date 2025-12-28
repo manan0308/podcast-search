@@ -1,8 +1,7 @@
 """Unit tests for cache service."""
 
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
-import json
+from unittest.mock import AsyncMock, patch
 
 from app.services.cache import CacheService, EmbeddingCache, SearchCache
 

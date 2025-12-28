@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 from pydantic import BaseModel, Field
-from typing import Literal, Optional
+from typing import Optional
 
 
 class EpisodeData(BaseModel):

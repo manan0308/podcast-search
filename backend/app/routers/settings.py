@@ -8,7 +8,6 @@ Provides endpoints for:
 """
 
 import os
-import re
 from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, HTTPException, status

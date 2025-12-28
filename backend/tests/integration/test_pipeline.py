@@ -7,7 +7,6 @@ Uses mocks for external services (YouTube, transcription, embeddings).
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
-from datetime import datetime
 from pathlib import Path
 
 from app.workers.pipeline import TranscriptionPipeline

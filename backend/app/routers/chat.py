@@ -1,4 +1,3 @@
-from uuid import UUID
 from fastapi import APIRouter
 
 from app.dependencies import DB

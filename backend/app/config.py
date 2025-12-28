@@ -43,13 +43,13 @@ class Settings(BaseSettings):
     QDRANT_API_KEY: str | None = None
     QDRANT_COLLECTION_NAME: str = "podcast_chunks"
 
-    # OpenAI
-    OPENAI_API_KEY: str
+    # OpenAI (optional for testing, required for production)
+    OPENAI_API_KEY: str | None = None
     EMBEDDING_MODEL: str = "text-embedding-3-small"
     EMBEDDING_DIMENSIONS: int = 1536
 
-    # Anthropic
-    ANTHROPIC_API_KEY: str
+    # Anthropic (optional for testing, required for production)
+    ANTHROPIC_API_KEY: str | None = None
     ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
 
     # Transcription - AssemblyAI

@@ -43,9 +43,8 @@ class WhisperProvider(TranscriptionProvider):
         # Whisper doesn't natively support diarization
         # We use pyannote for this if available
         try:
-            import pyannote.audio
-
-            return True
+            import importlib.util
+            return importlib.util.find_spec("pyannote.audio") is not None
         except ImportError:
             return False
 
@@ -245,7 +244,6 @@ class WhisperProvider(TranscriptionProvider):
         subprocess with list args (not shell) to prevent injection.
         """
         import subprocess
-        import os
         from app.config import settings
 
         # Validate path is a real file

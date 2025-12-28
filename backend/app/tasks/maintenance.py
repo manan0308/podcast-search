@@ -1,11 +1,10 @@
 """Maintenance tasks for Celery."""
 
-import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from uuid import UUID
 from celery.utils.log import get_task_logger
-from sqlalchemy import select, func, update
+from sqlalchemy import select, func
 
 from app.celery_app import celery_app
 from app.config import settings

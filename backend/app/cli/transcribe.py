@@ -71,7 +71,7 @@ def create_batch(
     from datetime import datetime
     from sqlalchemy import select
     from app.database import AsyncSessionLocal
-    from app.models import Channel, Episode, Batch, Job
+    from app.models import Episode, Batch, Job
 
     async def _batch():
         ch = await get_channel_by_name_or_id(channel)
@@ -180,13 +180,12 @@ def hybrid_transcribe(
     2. Uploads to Modal for parallel GPU transcription
     3. Processes results back to database
     """
-    from uuid import uuid4
     from pathlib import Path
     from concurrent.futures import ThreadPoolExecutor
     from datetime import datetime
     from sqlalchemy import select
     from app.database import AsyncSessionLocal
-    from app.models import Episode, Batch, Job
+    from app.models import Episode
     from app.services.youtube import YouTubeService
     from app.services.transcription.modal_hybrid import ModalHybridProvider
 
@@ -295,7 +294,7 @@ def hybrid_transcribe(
 
             await db.commit()
 
-        console.print(f"\n[bold green]Complete![/bold green]")
+        console.print("\n[bold green]Complete![/bold green]")
         console.print(f"  Transcribed: {success}")
         console.print(f"  Failed: {len(results) - success}")
 
@@ -354,7 +353,7 @@ def transcribe_single(
             console.print(f"[red]Transcription failed: {result.error_message}[/red]")
             raise typer.Exit(1)
 
-        console.print(f"\n[green]Transcription complete![/green]")
+        console.print("\n[green]Transcription complete![/green]")
         console.print(f"Duration: {result.duration_ms / 1000:.0f}s")
         console.print(f"Utterances: {len(result.utterances or [])}")
 

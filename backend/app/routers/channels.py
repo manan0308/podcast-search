@@ -1,7 +1,7 @@
 import re
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select, func
+from sqlalchemy import select
 from slugify import slugify
 from loguru import logger
 

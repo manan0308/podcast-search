@@ -12,7 +12,6 @@ from rich.prompt import Confirm
 
 from app.cli.helpers import (
     get_channel_by_name_or_id,
-    format_datetime,
 )
 from app.config import settings
 
@@ -187,7 +186,7 @@ def show_stats():
     """Show detailed system statistics."""
     from sqlalchemy import select, func
     from app.database import AsyncSessionLocal
-    from app.models import Channel, Episode, Batch, Job, Chunk, Utterance
+    from app.models import Channel, Episode, Job, Chunk, Utterance
 
     async def _stats():
         async with AsyncSessionLocal() as db:

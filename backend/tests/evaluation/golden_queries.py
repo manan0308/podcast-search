@@ -12,7 +12,6 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
-from uuid import UUID
 from loguru import logger
 
 

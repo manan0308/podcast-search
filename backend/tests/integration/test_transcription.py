@@ -1,7 +1,6 @@
 """Integration tests for transcription pipeline."""
 
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 import asyncio
 
 

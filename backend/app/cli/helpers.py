@@ -2,7 +2,6 @@
 CLI helper functions and utilities.
 """
 
-import asyncio
 from datetime import datetime
 from typing import Optional
 from rich.console import Console

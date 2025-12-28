@@ -2,7 +2,6 @@
 
 import asyncio
 import pytest
-from unittest.mock import patch, MagicMock
 
 from app.tasks.async_helpers import run_async, get_event_loop, cleanup_loop
 

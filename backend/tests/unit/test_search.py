@@ -1,13 +1,12 @@
 """Unit tests for search services."""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
-from datetime import datetime
 
 from app.services.search import SearchService
 from app.services.hybrid_search import HybridSearchService
-from app.services.postgres_search import PostgresSearchService, KeywordSearchResult
+from app.services.postgres_search import PostgresSearchService
 
 
 class TestSearchService:

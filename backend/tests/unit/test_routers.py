@@ -5,17 +5,11 @@ Tests router logic with mocked dependencies.
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
-from datetime import datetime
 
-from httpx import AsyncClient
-from fastapi import FastAPI
 
-from app.main import app
 from app.models import Channel, Episode, Batch, Job
-from app.dependencies import get_db
-from app.config import settings
 
 
 class TestChannelRouter:

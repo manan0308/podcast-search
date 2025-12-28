@@ -1,12 +1,11 @@
 """Pytest configuration and fixtures for podcast search backend tests."""
 
 import asyncio
-import os
 import pytest
 from typing import AsyncGenerator
 from uuid import uuid4
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker

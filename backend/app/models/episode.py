@@ -8,7 +8,6 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     JSON,
-    Boolean,
     Index,
 )
 from sqlalchemy.orm import relationship

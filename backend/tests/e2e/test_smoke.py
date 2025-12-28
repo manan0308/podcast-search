@@ -19,8 +19,6 @@ Requirements:
 import os
 import asyncio
 import pytest
-from uuid import UUID
-from datetime import datetime
 from httpx import AsyncClient
 
 # Test configuration

@@ -1,6 +1,5 @@
 import uuid
 import json
-import asyncio
 from pathlib import Path
 from datetime import datetime
 from loguru import logger
@@ -15,7 +14,7 @@ from app.services.speaker_labeling import SpeakerLabelingService
 from app.services.chunking import ChunkingService
 from app.services.embedding import EmbeddingService
 from app.services.vector_store import VectorStoreService
-from app.services.websocket_manager import publish_job_update, publish_batch_update
+from app.services.websocket_manager import publish_job_update
 
 
 class TranscriptionPipeline:
@@ -112,7 +111,7 @@ class TranscriptionPipeline:
                 speakers,
                 episode.title,
             )
-            await self._log(job, "info", f"Speaker labeling complete")
+            await self._log(job, "info", "Speaker labeling complete")
 
             # Step 4: Save utterances
             await self._save_utterances(episode, labeled_utterances)

@@ -197,7 +197,6 @@ class ChunkingService:
         if not current_utterances:
             return False
 
-        last_text = current_utterances[-1].get("text", "").lower()
         next_text = next_utterance.get("text", "").lower()
 
         # Transition markers indicating new topic

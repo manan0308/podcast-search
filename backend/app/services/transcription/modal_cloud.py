@@ -7,9 +7,7 @@ Cost: ~$0.03-0.05 per hour of audio (A10G GPU pricing).
 
 import asyncio
 import uuid
-import json
 from pathlib import Path
-from typing import Optional
 from loguru import logger
 
 from app.services.transcription.base import (

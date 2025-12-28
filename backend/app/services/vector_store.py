@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from typing import Any
 from loguru import logger
 from qdrant_client import QdrantClient
 from qdrant_client.models import (

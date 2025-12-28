@@ -9,10 +9,8 @@ from rich.console import Console
 from rich.table import Table
 
 from app.cli.helpers import (
-    get_batch_status,
     get_channel_by_name_or_id,
     format_datetime,
-    format_duration,
 )
 
 console = Console()
@@ -35,7 +33,7 @@ def jobs_status(
     """Show job status."""
     from sqlalchemy import select, func
     from app.database import AsyncSessionLocal
-    from app.models import Job, Episode, Batch
+    from app.models import Job, Episode
 
     async def _status():
         async with AsyncSessionLocal() as db:

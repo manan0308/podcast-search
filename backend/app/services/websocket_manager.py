@@ -7,7 +7,7 @@ via Redis PubSub for cross-process communication.
 
 import asyncio
 import json
-from typing import Dict, Set, Any
+from typing import Dict, Set
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from fastapi import WebSocket

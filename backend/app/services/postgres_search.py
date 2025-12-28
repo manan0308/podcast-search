@@ -14,11 +14,10 @@ Benefits over in-memory BM25:
 from uuid import UUID
 from typing import Optional
 from dataclasses import dataclass
-from sqlalchemy import select, func, text, and_, or_
+from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
 
-from app.models import Chunk, Episode, Channel
+from app.models import Chunk, Episode
 
 
 @dataclass

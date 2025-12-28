@@ -20,7 +20,6 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Callable
 from loguru import logger
 
-from app.config import settings
 from app.services.transcription.base import (
     TranscriptionProvider,
     TranscriptionStatus,
@@ -32,7 +31,6 @@ from app.services.transcription.modal_cloud import MODAL_AVAILABLE
 if MODAL_AVAILABLE:
     from app.services.transcription.modal_cloud import (
         ModalWhisperTranscriber,
-        modal_app,
     )
 
 

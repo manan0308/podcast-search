@@ -125,7 +125,9 @@ def get_available_providers() -> list[dict]:
     whisper_note = None
 
     try:
-        import whisper
+        import importlib.util
+        if importlib.util.find_spec("whisper") is None:
+            raise ImportError()
     except ImportError:
         whisper_available = False
         whisper_note = "openai-whisper not installed"
@@ -152,15 +154,15 @@ def get_available_providers() -> list[dict]:
     diarization_available = False
 
     try:
-        import faster_whisper
+        if importlib.util.find_spec("faster_whisper") is None:
+            raise ImportError()
     except ImportError:
         faster_whisper_available = False
         faster_whisper_note = "faster-whisper not installed"
 
     try:
-        import pyannote.audio
-
-        diarization_available = True
+        if importlib.util.find_spec("pyannote.audio") is not None:
+            diarization_available = True
     except ImportError:
         pass
 

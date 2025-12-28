@@ -1,7 +1,7 @@
 """Transcription tasks for Celery."""
 
 from uuid import UUID
-from celery import group, chain
+from celery import group
 from celery.utils.log import get_task_logger
 from sqlalchemy import select
 
@@ -9,7 +9,6 @@ from app.celery_app import celery_app
 from app.database import async_session_factory
 from app.models import Batch, Job, Episode, Channel
 from app.workers.pipeline import TranscriptionPipeline
-from app.services.transcription import get_provider
 from app.tasks.async_helpers import run_async  # Efficient async runner
 
 logger = get_task_logger(__name__)
@@ -170,7 +169,7 @@ def process_batch_task(self, batch_id: str):
                 job_tasks.append(task)
 
             # Execute with concurrency limit
-            job_group = group(job_tasks)
+            _job_group = group(job_tasks)  # noqa: F841
 
             return {"status": "started", "job_count": len(jobs)}
 
@@ -211,7 +210,7 @@ def process_batch_task(self, batch_id: str):
         )
 
         # Apply the group and link to batch completion
-        group_result = task_group.apply_async()
+        _group_result = task_group.apply_async()  # noqa: F841
 
         # Chain with batch completion check
         check_batch_completion.apply_async(

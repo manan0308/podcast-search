@@ -5,7 +5,7 @@ import hashlib
 from datetime import datetime
 from uuid import UUID
 from typing import Optional
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
@@ -23,7 +23,6 @@ def generate_api_key() -> tuple[str, str]:
     The key_prefix is stored for identification.
     """
     # Generate 32-byte random key
-    key_bytes = secrets.token_bytes(32)
     full_key = f"ps_{secrets.token_urlsafe(32)}"
     key_prefix = full_key[:12]  # "ps_" + first 9 chars
 
@@ -86,7 +85,7 @@ class APIKeyService:
         result = await self.db.execute(
             select(APIKey).where(
                 APIKey.key_hash == key_hash,
-                APIKey.is_active == True,
+                APIKey.is_active.is_(True),
             )
         )
         api_key = result.scalar_one_or_none()

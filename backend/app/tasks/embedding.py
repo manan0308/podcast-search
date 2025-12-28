@@ -2,7 +2,6 @@
 
 import hashlib
 import json
-from typing import Optional
 from celery.utils.log import get_task_logger
 
 from app.celery_app import celery_app

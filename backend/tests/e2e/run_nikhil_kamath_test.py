@@ -24,13 +24,13 @@ backend_path = str(Path(__file__).parent.parent.parent)
 sys.path.insert(0, backend_path)
 
 # Load .env BEFORE importing app modules (critical for pydantic-settings)
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # noqa: E402
 
 env_path = Path(backend_path) / ".env"
 load_dotenv(env_path, override=True)
 
 # Now import asyncio (after path setup)
-import asyncio
+import asyncio  # noqa: E402
 
 # Set environment defaults BEFORE importing app modules
 os.environ.setdefault("ENVIRONMENT", "development")
@@ -38,11 +38,11 @@ os.environ.setdefault("AUDIO_DIR", tempfile.mkdtemp())
 os.environ.setdefault("TRANSCRIPTS_DIR", tempfile.mkdtemp())
 
 # Clear settings cache to force reload with new env vars
-from app.config import get_settings
+from app.config import get_settings  # noqa: E402
 
 get_settings.cache_clear()
 
-from loguru import logger
+from loguru import logger  # noqa: E402
 
 # Configure logging
 logger.remove()
@@ -268,7 +268,7 @@ async def test_chunking(labeled_transcripts, channel_name: str = "Nikhil Kamath"
             )
             # Show sample enriched text
             sample = chunks[0]
-            logger.info(f"  Sample enriched header:")
+            logger.info("  Sample enriched header:")
             header_lines = sample.text_for_embedding.split("---")[0].strip().split("\n")
             for line in header_lines[:4]:
                 logger.info(f"    {line}")

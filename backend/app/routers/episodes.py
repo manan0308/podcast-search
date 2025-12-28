@@ -4,7 +4,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 
 from app.dependencies import DB, AdminAuth
-from app.models import Episode, Channel, Utterance
+from app.models import Episode, Channel
 from app.schemas.episode import (
     EpisodeResponse,
     EpisodeListResponse,

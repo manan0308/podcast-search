@@ -1,4 +1,3 @@
-import asyncio
 import httpx
 from pathlib import Path
 from loguru import logger

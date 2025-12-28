@@ -1,5 +1,4 @@
 import asyncio
-from typing import List
 from loguru import logger
 import openai
 from tenacity import retry, stop_after_attempt, wait_exponential

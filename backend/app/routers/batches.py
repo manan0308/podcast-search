@@ -13,7 +13,6 @@ from app.schemas.batch import (
     BatchResponse,
     BatchDetailResponse,
     BatchListResponse,
-    BatchStartRequest,
     JobSummary,
 )
 from app.services.transcription import get_provider
