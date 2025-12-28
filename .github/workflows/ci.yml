@@ -56,6 +56,8 @@ jobs:
         env:
           DATABASE_URL: postgresql://podcast:podcast@localhost:5432/podcast_search_test
           ADMIN_SECRET: test-secret-for-ci
+          OPENAI_API_KEY: test-key
+          ANTHROPIC_API_KEY: test-key
         run: |
           alembic upgrade head
 
